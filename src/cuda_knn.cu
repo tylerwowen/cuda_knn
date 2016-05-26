@@ -19,52 +19,96 @@ using namespace std;
 static void CheckCudaErrorAux (const char *, unsigned, const char *, cudaError_t);
 #define CUDA_CHECK_RETURN(value) CheckCudaErrorAux(__FILE__,__LINE__, #value, value)
 
-/**
- * CUDA kernel that computes reciprocal values for a given vector
- */
-__global__ void calculateDistance(User *d_users, int numUsers) {
-  unsigned userId = threadIdx.x; //+ blockIdx.x * 200;
-  //  unsigned movieId = threadIdx.x;
-  User *baseUser = d_users + userId;
-  for (int i = 0; i < numUsers; i++) {
-    double dotProduct = 0, baseNormSQ = 0, neighborNormSQ = 0;
-    User *neighbor = d_users + i;
-    Rating *baseRating = baseUser->ratings,
-        *baseEnd = baseUser->ratings + baseUser->numRatings,
-        *neighborRating = neighbor->ratings,
-        *neighborEnd = neighbor->ratings + neighbor->numRatings;
-    while (baseRating < baseEnd && neighborRating < neighborEnd) {
-      if (baseRating->itemId == neighborRating->itemId) {
-        dotProduct += baseRating->rating * neighborRating->rating;
-        baseNormSQ += baseRating->rating * baseRating->rating;
-        neighborNormSQ += neighborRating->rating * neighborRating->rating;
-        baseRating++;
-        neighborRating++;
-      } else if (baseRating->itemId > neighborRating->itemId) {
-        // treat baseRating->rating as 0
-        neighborNormSQ += neighborRating->rating * neighborRating->rating;
-        neighborRating++;
-      } else {
-        // treat neighborRating->rating as 0
-        baseNormSQ += baseRating->rating * baseRating->rating;
-        baseRating++;
-      }
-    }
-    // finish baseUser tail, if any
-    while (baseRating < baseEnd) {
-      baseNormSQ += baseRating->rating * baseRating->rating;
-      baseRating++;
-    }
-    // finish neighbor tail, if any
-    while (neighborRating < neighborEnd) {
-      neighborNormSQ += neighborRating->rating * neighborRating->rating;
-      neighborRating++;
-    }
+__device__
+double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
+  double dotProduct = 0.0f, r1NormSQ = 0.0f, r2NormSQ = 0.0f;
 
-    // distance
-    double distance = dotProduct / (sqrt(baseNormSQ) * sqrt(neighborNormSQ));
-//    printf("distance from user %d to user %d is %.20lf\n", userId + 1, i, distance);
+  while (r1Start < r1End && r2Start < r2End) {
+    if (r1Start->itemId == r2Start->itemId) {
+      dotProduct += r1Start->rating * r2Start->rating;
+      r1NormSQ += r1Start->rating * r1Start->rating;
+      r2NormSQ += r2Start->rating * r2Start->rating;
+      r1Start++;
+      r2Start++;
+    } else if (r1Start->itemId > r2Start->itemId) {
+      // treat r1Start->rating as 0
+      r2NormSQ += r2Start->rating * r2Start->rating;
+      r2Start++;
+    } else {
+      // treat r2Start->rating as 0
+      r1NormSQ += r1Start->rating * r1Start->rating;
+      r1Start++;
+    }
   }
+  // finish baseUser tail, if any
+  while (r1Start < r1End) {
+    r1NormSQ += r1Start->rating * r1Start->rating;
+    r1Start++;
+  }
+  // finish neighbor tail, if any
+  while (r2Start < r2End) {
+    r2NormSQ += r2Start->rating * r2Start->rating;
+    r2Start++;
+  }
+  // distance
+  return  dotProduct / (sqrt(r1NormSQ) * sqrt(r2NormSQ));
+}
+
+/**
+ * Calculate all pair-wise distances in a tile
+ */
+__device__
+void tileCalculation(User *tileStartUser, Rating *baseStart, Rating *baseEnd) {
+  // TODO: experimental, need optimization
+  // space for 20 user, each one has at most 256 ratings
+  extern __shared__ Rating ratings[];
+
+  // total 10 threads in x direction
+  User *neighbor = tileStartUser + threadIdx.y;
+  Rating *neighborStart = &ratings[threadIdx.y * 256],
+      *neighborEnd = neighborStart + neighbor->numRatings;
+
+  // copy data to shared memory, neighbors are the first 10 users
+  if (threadIdx.y == 0) {
+    for (int i = 0; i < neighbor->numRatings; i++)
+      neighborStart[i] = neighbor->ratings[i];
+    // TODO: what if there are more than 256 users
+  }
+  __syncthreads();
+
+  double distance = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
+  if (threadIdx.x == 0 && threadIdx.y == 0)
+    printf("distance from 0 to %d is %lf\n", threadIdx.y, distance);
+}
+
+/**
+ * CUDA kernel that computes distances between every two users in d_users
+ */
+__global__ void calculateAllDistance(User *d_users, int numUsers) {
+  int gtid = blockIdx.x * blockDim.x + threadIdx.x;
+
+  extern __shared__ Rating ratings[5120];
+  User *baseUser = d_users + gtid;
+  Rating *ratingStart = &ratings[threadIdx.x * 256],
+      *ratingEnd = ratingStart + baseUser->numRatings;
+
+  // copy data to shared memory, base users are the last 10 users
+  if (threadIdx.x == 0) {
+    for (int i = 0; i < baseUser->numRatings; i++)
+      ratingStart[i] = baseUser->ratings[i];
+    // TODO: what if there are more than 256 users
+  }
+  __syncthreads();
+
+  User *tileStartUser = d_users;
+  // 10 user per time for now
+  for (int i = 0; i < numUsers - 10; i += 10) {
+    tileCalculation(tileStartUser, ratingStart, ratingEnd);
+    tileStartUser += 10;
+    __syncthreads();
+  }
+
+//  printf("distance from user %d to user %d is %.20lf\n", userId + 1, i, distance);
 }
 
 void initUsers(User *users, int num) {
@@ -111,8 +155,8 @@ void moveRatingsToDevice(
 
     ratingsSoFar += numRatings;
   }
-  CUDA_CHECK_RETURN(cudaMalloc((void ** )d_users, sizeof(User) * (numTrainUsers)));
-  CUDA_CHECK_RETURN(cudaMemcpy(*d_users, h_users, sizeof(User) * (numTrainUsers),cudaMemcpyHostToDevice));
+  CUDA_CHECK_RETURN(cudaMalloc((void ** )d_users, sizeof(User) * numTrainUsers));
+  CUDA_CHECK_RETURN(cudaMemcpy(*d_users, h_users, sizeof(User) * numTrainUsers,cudaMemcpyHostToDevice));
 
   delete[] h_ratings;
   delete[] h_users;
@@ -125,21 +169,27 @@ void computeAllDistances(
     H_Users h_testUsers)
 {
 
-  User *d_users = NULL;
-  Rating *d_allRatings = NULL;
+  User *d_users;
+  Rating *d_allRatings;
+
+  cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
+  cout << "number of users: " << h_trainUsers.size() << endl;
 
   moveRatingsToDevice(h_trainUsers, &d_users, &d_allRatings, trainUserRatingCount);
+  cout << "data moved to device\n";
 
   cudaEvent_t start, stop;
   float milliseconds = 0;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
   cudaEventRecord(start);
-  calculateDistance<<<1, 942>>> (d_users, h_trainUsers.size());
+  dim3 threadsPerBlock(10, 10);
+  cout << "kernel starts\n";
+  calculateAllDistance<<<92, threadsPerBlock>>> (d_users, h_trainUsers.size());
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&milliseconds, start, stop);
-  cout << "distance calculation costs " << milliseconds << "ms\n";
+  cout << "kernel ended, took " << milliseconds << "ms\n";
 
   /* Free memory */
   cudaEventDestroy(start);

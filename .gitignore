@@ -98,3 +98,4 @@ remote
 remote_release
 Debug/src
 Debug/cuda_knn.dSYM
+Debug/cuda_knn

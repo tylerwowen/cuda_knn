@@ -12,7 +12,7 @@
  *  {itemId, rating}
  */
 typedef struct __align__(8) {
-  unsigned int itemId;
+  unsigned itemId;
   float rating;
 } Rating;
 
