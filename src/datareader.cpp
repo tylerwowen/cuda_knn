@@ -19,9 +19,9 @@ int readData(string const &filename, H_Users &users) {
     if (ifs.fail()) {
       break;
     }
-    if (userId != lastUser) {
+    while (userId - lastUser > 0) {
       users.push_back(H_Ratings());
-      lastUser = userId;
+      lastUser++;
     }
     H_Ratings *ratings = &users[userId-1];
     ratings->emplace_back(itemId, rating);

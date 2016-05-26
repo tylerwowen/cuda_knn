@@ -25,6 +25,7 @@ int main(int argc, char ** argv) {
 
   int trainUserRatingCount;
   H_Users h_trainUsers, h_testUsers;
+  h_trainUsers.reserve(args.userNum);
   trainUserRatingCount = readData(args.trainFile, h_trainUsers);
 
   computeAllDistances(
