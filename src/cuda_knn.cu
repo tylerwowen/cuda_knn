@@ -16,6 +16,9 @@
 
 using namespace std;
 
+#define TILE_SIZE 24
+#define TILE_DEPTH 128
+
 __device__
 double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
   double dotProduct = 0.0f, r1NormSQ = 0.0f, r2NormSQ = 0.0f;
@@ -61,40 +64,40 @@ void calculateAllDistance(User *d_users, int numUsers) {
   int gtid = blockIdx.x * blockDim.x + threadIdx.x;
 
   // TODO: experimental, need optimization
-  // space for 20 user, each one has at most 256 ratings
-  __shared__ Rating ratings[5120];
+  // space for TILE_SIZE * 2 users, each one has at most TILE_DEPTH ratings
+  __shared__ Rating ratings[TILE_DEPTH * TILE_SIZE * 2];
 
   User* baseUser = d_users + gtid;
-  int numRatings = min(baseUser->numRatings, 256);
-  Rating *baseStart = ratings + (threadIdx.x + 10) * 256,
+  int numRatings = min(baseUser->numRatings, TILE_DEPTH);
+  Rating *baseStart = ratings + (threadIdx.x + TILE_SIZE) * TILE_DEPTH,
       *baseEnd = baseStart + numRatings;
   if (threadIdx.y == 0) {
-    // copy data to shared memory, base users are the last 10 users
+    // copy data to shared memory, base users are the last TILE_SIZE users
     for (int i = 0; i < numRatings; i++)
       baseStart[i] = baseUser->ratings[i];
-    // TODO: what if there are more than 256 users
+    // TODO: what if there are more than TILE_DEPTH users
   }
   __syncthreads();
 //  printf("hello from block %d thread x %d, thread y %d\n", blockIdx.x, threadIdx.x, threadIdx.y);
 
   User *tileStartUser = d_users;
-  // 10 user per time for now
-  for (int i = 0; i < numUsers - 10; i += 10) {
+  // TILE_SIZE user per time for now
+  for (int i = 0; i < numUsers - TILE_SIZE; i += TILE_SIZE) {
     User *neighbor = tileStartUser + threadIdx.y;
-    int nbNumRatings = min(baseUser->numRatings, 256);
-    Rating *neighborStart = ratings + threadIdx.y * 256,
+    int nbNumRatings = min(baseUser->numRatings, TILE_DEPTH);
+    Rating *neighborStart = ratings + threadIdx.y * TILE_DEPTH,
         *neighborEnd = neighborStart + nbNumRatings;
 
     if (threadIdx.x == 0) {
-      // copy data to shared memory, neighbors are the first 10 users
+      // copy data to shared memory, neighbors are the first TILE_SIZE users
       for (int i = 0; i < nbNumRatings; i++)
         neighborStart[i] = neighbor->ratings[i];
-      // TODO: what if there are more than 256 users
+      // TODO: what if there are more than TILE_DEPTH users
     }
     __syncthreads();
 
     double distance = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
-    tileStartUser += 10;
+    tileStartUser += TILE_SIZE;
     __syncthreads();
   }
 
@@ -160,8 +163,9 @@ void computeAllDistances(
   moveRatingsToDevice(h_trainUsers, &d_users, &d_allRatings, trainUserRatingCount);
   cout << "data moved to device\n";
 
-  dim3 threadsPerBlock(10, 10);
-  cout << "kernel starts\n";
+  dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
+  int numBlocks = h_trainUsers.size() / TILE_SIZE;
+  cout << "kernel starts with " << numBlocks << " blocks\n";
 
   cudaEvent_t start, stop;
   float milliseconds = 0;
@@ -169,7 +173,7 @@ void computeAllDistances(
   cudaEventCreate(&stop);
 
   cudaEventRecord(start);
-  calculateAllDistance<<<94, threadsPerBlock>>> (d_users, h_trainUsers.size());
+  calculateAllDistance<<<numBlocks, threadsPerBlock>>> (d_users, h_trainUsers.size());
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);

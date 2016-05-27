@@ -100,3 +100,4 @@ Debug/src
 Debug/cuda_knn.dSYM
 Debug/cuda_knn
 .ptp-sync-folder
+Release/src
