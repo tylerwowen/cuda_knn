@@ -16,9 +16,6 @@
 
 using namespace std;
 
-static void CheckCudaErrorAux (const char *, unsigned, const char *, cudaError_t);
-#define CUDA_CHECK_RETURN(value) CheckCudaErrorAux(__FILE__,__LINE__, #value, value)
-
 __device__
 double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
   double dotProduct = 0.0f, r1NormSQ = 0.0f, r2NormSQ = 0.0f;
@@ -57,62 +54,51 @@ double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rat
 }
 
 /**
- * Calculate all pair-wise distances in a tile
- */
-__device__
-void tileCalculation(Rating sharedRatings[],
-    User *tileStartUser,
-    Rating *baseStart,
-    Rating *baseEnd) {
-
-  // total 10 threads in x direction
-  User *neighbor = tileStartUser + threadIdx.y;
-  Rating *neighborStart = sharedRatings + threadIdx.y * 256,
-      *neighborEnd = neighborStart + min(neighbor->numRatings, 256);
-
-  // copy data to shared memory, neighbors are the first 10 users
-  if (threadIdx.y == 0) {
-    for (int i = 0; i < neighbor->numRatings && i < 256; i++)
-      neighborStart[i] = neighbor->ratings[i];
-    // TODO: what if there are more than 256 users
-  }
-  __syncthreads();
-
-  double distance = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
-//  if (threadIdx.x == 0 && threadIdx.y == 0)
-//    printf("distance from 0 to %d is %lf\n", threadIdx.y, distance);
-}
-
-/**
  * CUDA kernel that computes distances between every two users in d_users
  */
-__global__ void calculateAllDistance(User *d_users, int numUsers) {
+__global__
+void calculateAllDistance(User *d_users, int numUsers) {
   int gtid = blockIdx.x * blockDim.x + threadIdx.x;
 
   // TODO: experimental, need optimization
   // space for 20 user, each one has at most 256 ratings
   __shared__ Rating ratings[5120];
-  User *baseUser = d_users + gtid;
-  Rating *ratingStart = ratings + (threadIdx.x + 10)* 256,
-      *ratingEnd = ratingStart + min(baseUser->numRatings, 256);
 
-  // copy data to shared memory, base users are the last 10 users
-  if (threadIdx.x == 0) {
-    for (int i = 0; i < baseUser->numRatings && i < 256; i++)
-      ratingStart[i] = baseUser->ratings[i];
+  User* baseUser = d_users + gtid;
+  int numRatings = min(baseUser->numRatings, 256);
+  Rating *baseStart = ratings + (threadIdx.x + 10) * 256,
+      *baseEnd = baseStart + numRatings;
+  if (threadIdx.y == 0) {
+    // copy data to shared memory, base users are the last 10 users
+    for (int i = 0; i < numRatings; i++)
+      baseStart[i] = baseUser->ratings[i];
     // TODO: what if there are more than 256 users
   }
   __syncthreads();
+//  printf("hello from block %d thread x %d, thread y %d\n", blockIdx.x, threadIdx.x, threadIdx.y);
 
   User *tileStartUser = d_users;
   // 10 user per time for now
   for (int i = 0; i < numUsers - 10; i += 10) {
-    tileCalculation(ratings, tileStartUser, ratingStart, ratingEnd);
+    User *neighbor = tileStartUser + threadIdx.y;
+    int nbNumRatings = min(baseUser->numRatings, 256);
+    Rating *neighborStart = ratings + threadIdx.y * 256,
+        *neighborEnd = neighborStart + nbNumRatings;
+
+    if (threadIdx.x == 0) {
+      // copy data to shared memory, neighbors are the first 10 users
+      for (int i = 0; i < nbNumRatings; i++)
+        neighborStart[i] = neighbor->ratings[i];
+      // TODO: what if there are more than 256 users
+    }
+    __syncthreads();
+
+    double distance = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
     tileStartUser += 10;
     __syncthreads();
   }
 
-//  printf("distance from user %d to user %d is %.20lf\n", userId + 1, i, distance);
+  //  printf("distance from user %d to user %d is %.20lf\n", userId + 1, i, distance);
 }
 
 void initUsers(User *users, int num) {
@@ -131,9 +117,7 @@ void moveRatingsToDevice(
   initUsers(h_users, numTrainUsers);
 
   Rating *h_ratings = new Rating[sizeof(Rating) * trainUserRatingCount];
-  CUDA_CHECK_RETURN(
-        cudaMalloc((void ** )d_ratings,
-            sizeof(Rating) * trainUserRatingCount));
+  checkCudaErrors(cudaMalloc((void ** )d_ratings, sizeof(Rating) * trainUserRatingCount));
   cout << "total size of ratings in bytes: " << sizeof(Rating) * trainUserRatingCount << endl;
 
   int ratingsSoFar = 0;
@@ -152,11 +136,9 @@ void moveRatingsToDevice(
     ratingsSoFar += numRatings;
   }
   // move data from host to device
-  CUDA_CHECK_RETURN(
-      cudaMemcpy(*d_ratings, h_ratings, sizeof(Rating) * trainUserRatingCount,
-          cudaMemcpyHostToDevice));
-  CUDA_CHECK_RETURN(cudaMalloc((void ** )d_users, sizeof(User) * numTrainUsers));
-  CUDA_CHECK_RETURN(cudaMemcpy(*d_users, h_users, sizeof(User) * numTrainUsers,cudaMemcpyHostToDevice));
+  checkCudaErrors(cudaMemcpy(*d_ratings, h_ratings, sizeof(Rating) * trainUserRatingCount, cudaMemcpyHostToDevice));
+  checkCudaErrors(cudaMalloc((void ** )d_users, sizeof(User) * numTrainUsers));
+  checkCudaErrors(cudaMemcpy(*d_users, h_users, sizeof(User) * numTrainUsers,cudaMemcpyHostToDevice));
 
   delete[] h_ratings;
   delete[] h_users;
@@ -185,8 +167,10 @@ void computeAllDistances(
   float milliseconds = 0;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
+
   cudaEventRecord(start);
-  calculateAllDistance<<<8, threadsPerBlock>>> (d_users, h_trainUsers.size());
+  calculateAllDistance<<<94, threadsPerBlock>>> (d_users, h_trainUsers.size());
+
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&milliseconds, start, stop);
@@ -195,20 +179,8 @@ void computeAllDistances(
   /* Free memory */
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-  CUDA_CHECK_RETURN(cudaFree(d_allRatings));
-  CUDA_CHECK_RETURN(cudaFree(d_users));
+  checkCudaErrors(cudaFree(d_allRatings));
+  checkCudaErrors(cudaFree(d_users));
   cudaDeviceReset();
-}
-
-/**
- * Check the return value of the CUDA runtime API call and exit
- * the application if the call has failed.
- */
-static void CheckCudaErrorAux (const char *file, unsigned line, const char *statement, cudaError_t err)
-{
-  if (err == cudaSuccess)
-    return;
-  std::cerr << statement<<" returned " << cudaGetErrorString(err) << "("<<err<< ") at "<<file<<":"<<line << std::endl;
-  exit (1);
 }
 

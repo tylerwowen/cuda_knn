@@ -8,6 +8,8 @@
 #ifndef COMMON_CUH_
 #define COMMON_CUH_
 
+#include "helper_cuda.h"
+
 /**
  *  {itemId, rating}
  */
