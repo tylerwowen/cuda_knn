@@ -16,8 +16,8 @@
 
 using namespace std;
 
-#define TILE_SIZE 24
-#define TILE_DEPTH 128
+#define TILE_SIZE 32
+#define TILE_DEPTH 96
 
 __device__
 double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
@@ -84,7 +84,7 @@ void calculateAllDistance(User *d_users, int numUsers) {
   // TILE_SIZE user per time for now
   for (int i = 0; i < numUsers - TILE_SIZE; i += TILE_SIZE) {
     User *neighbor = tileStartUser + threadIdx.y;
-    int nbNumRatings = min(baseUser->numRatings, TILE_DEPTH);
+    int nbNumRatings = min(neighbor->numRatings, TILE_DEPTH);
     Rating *neighborStart = ratings + threadIdx.y * TILE_DEPTH,
         *neighborEnd = neighborStart + nbNumRatings;
 
