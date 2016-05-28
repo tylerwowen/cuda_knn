@@ -94,10 +94,13 @@ local.properties
 *.fatbin
 
 .ptp-sync
-remote
-remote_release
-Debug/src
-Debug/cuda_knn.dSYM
-Debug/cuda_knn
 .ptp-sync-folder
-Release/src
+
+
+nsightbuilddata
+
+# built objects
+*.d
+
+# executable 
+*_*/cuda_knn
