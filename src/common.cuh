@@ -18,12 +18,4 @@ typedef struct __align__(8) {
   float rating;
 } Rating;
 
-/**
- *  {RatingsPtr, numRatings}
- */
-typedef struct __align__(8) {
-  Rating *ratings;
-  int numRatings;
-} User;
-
 #endif /* COMMON_CUH_ */

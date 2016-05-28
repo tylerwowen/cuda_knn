@@ -172,7 +172,7 @@
 								<inputType id="nvcc.compiler.input.c.279995172" superClass="nvcc.compiler.input.c"/>
 							</tool>
 							<tool id="nvcc.linker.base.1466102683" name="NVCC Linker" superClass="nvcc.linker.base">
-								<option id="nvcc.linker.option.libs.345348119" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs"/>
+								<option id="nvcc.linker.option.libs.345348119" name="Libraries (-l)" superClass="nvcc.linker.option.libs"/>
 								<inputType id="nvcc.linker.input.1608557398" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -249,6 +249,7 @@
 								<option id="com.nvidia.cuda.ide.build.option1.1474410983" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/usr/bin/clang++-3.6" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.2053337139" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1880685635" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
+								<option id="nvcc.compiler.option.lineinfo.645819217" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="true" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.2137729536" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.319226390" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1317362576" superClass="nvcc.compiler.input.c"/>
@@ -277,6 +278,7 @@
 								<option id="com.nvidia.cuda.ide.build.option1.952094783" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/usr/bin/clang++-3.6" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.710360448" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1648643531" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
+								<option id="nvcc.compiler.option.lineinfo.1034335632" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="true" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.1920238621" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.115445082" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1679854594" superClass="nvcc.compiler.input.c"/>

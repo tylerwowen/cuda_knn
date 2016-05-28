@@ -10,7 +10,7 @@ using namespace std;
 
 int readData(string const &filename, H_Users &users) {
   ifstream ifs(filename);
-  int ratingCount = 0;
+  int ratingCount = 0, userRatingCount = 0;
   int lastUser = 0;
   while (true) {
     unsigned int userId, itemId, timestamp;
@@ -22,10 +22,15 @@ int readData(string const &filename, H_Users &users) {
     while (userId - lastUser > 0) {
       users.push_back(H_Ratings());
       lastUser++;
+      userRatingCount = 0;
     }
+
+    if (userRatingCount >= 192) continue;
+
     H_Ratings *ratings = &users[userId-1];
     ratings->emplace_back(itemId, rating);
     ratingCount++;
+    userRatingCount++;
   }
 
   return ratingCount;
