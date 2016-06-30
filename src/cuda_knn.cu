@@ -16,40 +16,40 @@
 
 using namespace std;
 
-#define TILE_SIZE 32
-#define TILE_DEPTH 96
+#define TILE_SIZE 24
+#define TILE_DEPTH 256
 
 __device__
 double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
   double dotProduct = 0.0f, r1NormSQ = 0.0f, r2NormSQ = 0.0f;
 
   while (r1Start < r1End && r2Start < r2End) {
-    if (r1Start->itemId > r2Start->itemId) {
+    if (r1Start->x > r2Start->x) {
       // treat r1Start->rating as 0
-      r2NormSQ += r2Start->rating * r2Start->rating;
+      r2NormSQ += r2Start->y * r2Start->y;
       r2Start++;
     }
-    else if (r1Start->itemId == r2Start->itemId) {
-      dotProduct += r1Start->rating * r2Start->rating;
-      r1NormSQ += r1Start->rating * r1Start->rating;
-      r2NormSQ += r2Start->rating * r2Start->rating;
+    else if (r1Start->x == r2Start->x) {
+      dotProduct += r1Start->y * r2Start->y;
+      r1NormSQ += r1Start->y * r1Start->y;
+      r2NormSQ += r2Start->y * r2Start->y;
       r1Start++;
       r2Start++;
     }
     else {
-      // treat r2Start->rating as 0
-      r1NormSQ += r1Start->rating * r1Start->rating;
+      // treat r2Start->y as 0
+      r1NormSQ += r1Start->y * r1Start->y;
       r1Start++;
     }
   }
   // finish baseUser tail, if any
   while (r1Start < r1End) {
-    r1NormSQ += r1Start->rating * r1Start->rating;
+    r1NormSQ += r1Start->y * r1Start->y;
     r1Start++;
   }
   // finish neighbor tail, if any
   while (r2Start < r2End) {
-    r2NormSQ += r2Start->rating * r2Start->rating;
+    r2NormSQ += r2Start->y * r2Start->y;
     r2Start++;
   }
   // distance
@@ -110,7 +110,7 @@ void moveRatingsToDevice(
     Rating **d_ratings) {
 
   int numTrainUsers = h_trainUsers.size();
-  int numRatings = numTrainUsers * 192;
+  int numRatings = numTrainUsers * TILE_DEPTH;
   int *h_users =  new int[numTrainUsers];;
   for (int i = 0; i < numTrainUsers; i++)
     h_users[i] = 0;
@@ -124,8 +124,8 @@ void moveRatingsToDevice(
 
     // copy vector to intermediate host array
     for (int j = 0; j < numRatings; j++) {
-      h_ratings[i * 192 + j].itemId = h_trainUsers[i][j].first;
-      h_ratings[i * 192 + j].rating = h_trainUsers[i][j].second;
+      h_ratings[i * TILE_DEPTH + j].x = h_trainUsers[i][j].first;
+      h_ratings[i * TILE_DEPTH + j].y = h_trainUsers[i][j].second * 2;
     }
 
     h_users[i] = numRatings;

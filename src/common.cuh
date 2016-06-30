@@ -13,9 +13,6 @@
 /**
  *  {itemId, rating}
  */
-typedef struct __align__(8) {
-  unsigned itemId;
-  float rating;
-} Rating;
+typedef ushort2 Rating;
 
 #endif /* COMMON_CUH_ */
