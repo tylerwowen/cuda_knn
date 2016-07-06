@@ -30,16 +30,16 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/usr/local/cuda-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/usr/local/cuda-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 --compile  -x c++ -o  "$@" "$<"
+	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 --compile  -x c++ -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.cu
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/usr/local/cuda-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/usr/local/cuda-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 --compile --relocatable-device-code=false -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30  -x cu -o  "$@" "$<"
+	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -lineinfo -O3 -ccbin /usr/bin/clang++-3.6 -std=c++11 --compile --relocatable-device-code=false -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30  -x cu -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

@@ -20,8 +20,8 @@ using namespace std;
 #define TILE_DEPTH 256
 
 __device__
-double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
-  double dotProduct = 0.0f, r1NormSQ = 0.0f, r2NormSQ = 0.0f;
+float calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rating *r2End) {
+  float dotProduct = 0.0, r1NormSQ = 0.0, r2NormSQ = 0.0;
 
   while (r1Start < r1End && r2Start < r2End) {
     if (r1Start->x > r2Start->x) {
@@ -60,22 +60,22 @@ double calculateCOSDistance(Rating *r1Start, Rating *r1End, Rating *r2Start, Rat
  * CUDA kernel that computes distances between every two users in d_users
  */
 __global__
-void calculateAllDistance(int *d_users, int numUsers, Rating *allRatings) {
-  int gtid = blockIdx.x * blockDim.x + threadIdx.x;
-
+void calculateAllDistance(int stageStartUser, int numUsers, int *d_users, Rating *allRatings, float *d_distances) {
+  int globalUserId = stageStartUser + blockIdx.x * blockDim.x + threadIdx.x;
+  int localUserId = blockIdx.x * blockDim.x + threadIdx.x;
   // TODO: experimental, need optimization
   // space for TILE_SIZE * 2 users, each one has at most TILE_DEPTH ratings
   __shared__ Rating ratings[TILE_DEPTH * TILE_SIZE * 2];
 
-  int baseNumRatings = d_users[gtid];
+  int baseNumRatings = d_users[globalUserId];
   int numRatings = min(baseNumRatings, TILE_DEPTH);
   Rating *baseStart = ratings + (threadIdx.x + TILE_SIZE) * TILE_DEPTH,
       *baseEnd = baseStart + numRatings;
 
-  // copy data to shared memory, base users are the last TILE_SIZE users
-  Rating *copyFrom = allRatings + gtid * TILE_DEPTH;
+  // copy data to shared memory, base users are the last TILE_SIZE users in ratings
+  Rating *copyFrom = allRatings + globalUserId * TILE_DEPTH;
   #pragma unroll
-  for (int i = threadIdx.y; i < TILE_DEPTH; i += TILE_DEPTH/TILE_SIZE)
+  for (int i = threadIdx.y; i < numRatings; i += TILE_SIZE)
     baseStart[i] = copyFrom[i];
   __syncthreads();
 
@@ -83,7 +83,7 @@ void calculateAllDistance(int *d_users, int numUsers, Rating *allRatings) {
 
   int *tileStartUser = d_users;
   // TILE_SIZE user per time for now
-  for (int i = 0; i < numUsers - TILE_SIZE; i += TILE_SIZE, tileStartUser += TILE_SIZE) {
+  for (int i = 0; i < numUsers; i += TILE_SIZE, tileStartUser += TILE_SIZE) {
     int neighborNumRatings = tileStartUser[threadIdx.y];
     int nbNumRatings = min(neighborNumRatings, TILE_DEPTH);
     Rating *neighborStart = ratings + threadIdx.y * TILE_DEPTH,
@@ -92,16 +92,16 @@ void calculateAllDistance(int *d_users, int numUsers, Rating *allRatings) {
     copyFrom = allRatings + (i + threadIdx.y) * TILE_DEPTH;
     // copy data to shared memory, neighbors are the first TILE_SIZE users
     #pragma unroll
-    for (int i = threadIdx.x; i < TILE_DEPTH; i += TILE_DEPTH/TILE_SIZE)
-      neighborStart[i] = copyFrom[i];
+    for (int j = threadIdx.x; j < nbNumRatings; j += TILE_SIZE)
+      neighborStart[j] = copyFrom[j];
     // TODO: what if there are more than TILE_DEPTH users
     __syncthreads();
 
-    double distance = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
+    d_distances[localUserId * numUsers + i + threadIdx.y] = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
     __syncthreads();
   }
 
-  //  printf("distance from user %d to user %d is %.20lf\n", userId + 1, i, distance);
+  printf("distance from user %d to user %d is %.20lf\n", localUserId, threadIdx.y, d_distances[localUserId * numUsers + threadIdx.y]);
 }
 
 void moveRatingsToDevice(
@@ -109,7 +109,8 @@ void moveRatingsToDevice(
     int **d_users,
     Rating **d_ratings) {
 
-  int numTrainUsers = h_trainUsers.size();
+  // make numTrainUsers a multiple of TILE_SIZE
+  int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
   int numRatings = numTrainUsers * TILE_DEPTH;
   int *h_users =  new int[numTrainUsers];;
   for (int i = 0; i < numTrainUsers; i++)
@@ -149,16 +150,31 @@ void computeAllDistances(
 
   int *d_users;
   Rating *d_allRatings;
+  int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
+  float *d_distances;
 
   cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
-  cout << "number of users: " << h_trainUsers.size() << endl;
+  cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
 
   moveRatingsToDevice(h_trainUsers, &d_users, &d_allRatings);
   cout << "data moved to device\n";
 
+  // get global memory
+  struct cudaDeviceProp prop;
+  checkCudaErrors(cudaGetDeviceProperties(&prop, 0));
+  cout << "device has " << prop.totalGlobalMem << " global memory\n";
+
+  // calculate how many distances GPU can store, e.g. size of stage
+  int ratingsSize = numTrainUsers * TILE_DEPTH * sizeof(Rating);
+  int freeMemSize = prop.totalGlobalMem - ratingsSize * 1.5;
+  int stageHeight = min(freeMemSize / (numTrainUsers * sizeof(float)) / TILE_SIZE, (long)numTrainUsers / TILE_SIZE);
+
+  // allocate memory for distances
+  checkCudaErrors(cudaMalloc((void **)&d_distances, sizeof(float) * numTrainUsers * stageHeight * TILE_SIZE));
+
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
-  int numBlocks = h_trainUsers.size() / TILE_SIZE;
-  cout << "kernel starts with " << numBlocks << " blocks\n";
+  cout << "each kernel has " << stageHeight << " blocks\n";
+  cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " kernels will be launched\n";
 
   cudaEvent_t start, stop;
   float milliseconds = 0;
@@ -166,7 +182,11 @@ void computeAllDistances(
   cudaEventCreate(&stop);
 
   cudaEventRecord(start);
-  calculateAllDistance<<<numBlocks, threadsPerBlock>>> (d_users, h_trainUsers.size(), d_allRatings);
+  for (int stageStartUser = 0; stageStartUser < numTrainUsers; stageStartUser += stageHeight * TILE_SIZE) {
+    int effectiveStageHeight = min(stageHeight, (numTrainUsers - stageStartUser) / TILE_SIZE);
+    calculateAllDistance<<<effectiveStageHeight, threadsPerBlock>>>
+        (stageStartUser, numTrainUsers, d_users, d_allRatings, d_distances);
+  }
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
