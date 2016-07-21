@@ -1,12 +1,12 @@
 /*
- * common.hpp
+ * common.h
  *
  *  Created on: May 18, 2016
  *      Author: tyler
  */
 
-#ifndef COMMON_HPP_
-#define COMMON_HPP_
+#ifndef COMMON_H_
+#define COMMON_H_
 
 #include <vector>
 
@@ -31,4 +31,4 @@ typedef std::vector<H_Rating> H_Ratings;
  */
 typedef std::vector<H_Ratings> H_Users;
 
-#endif /* COMMON_HPP_ */
+#endif /* COMMON_H_ */

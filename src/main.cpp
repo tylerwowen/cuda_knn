@@ -9,10 +9,10 @@
 
 #include <cuda_runtime.h>
 
-#include "argparser.hpp"
-#include "common.hpp"
-#include "datareader.hpp"
-#include "cuda_knn.hpp"
+#include "argparser.h"
+#include "common.h"
+#include "datareader.h"
+#include "cuda_knn.h"
 
 int main(int argc, char ** argv) {
   struct arguments args;

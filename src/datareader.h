@@ -1,18 +1,18 @@
 /*
- * datareader.hpp
+ * datareader.h
  *
  *  Created on: May 19, 2016
  *      Author: tyler
  */
 
-#ifndef DATAREADER_HPP_
-#define DATAREADER_HPP_
+#ifndef DATAREADER_H_
+#define DATAREADER_H_
 
 #include <fstream>
 #include <iostream>
 
-#include "common.hpp"
+#include "common.h"
 
 int readData(std::string const &filename, H_Users &users);
 
-#endif /* DATAREADER_HPP_ */
+#endif /* DATAREADER_H_ */

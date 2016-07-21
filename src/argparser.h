@@ -1,13 +1,13 @@
 //
-//  argparser.hpp
+//  argparser.h
 //  moivelens
 //
 //  Created by Tyler Weimin Ouyang on 2/23/16.
 //  Copyright © 2016 Tyler Ouyang. All rights reserved.
 //
 
-#ifndef argparser_hpp
-#define argparser_hpp
+#ifndef argparser_h
+#define argparser_h
 
 #include <argp.h>
 #include <stdlib.h>
@@ -42,8 +42,8 @@ struct arguments {
   bool prettyPrint;
 };
 
-error_t parse_opt (int key, char *arg, struct argp_state *state);
+error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 static struct argp argp = { options, parse_opt, 0, doc };
 
-#endif /* argparser_hpp */
+#endif /* argparser_h */

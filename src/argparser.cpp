@@ -6,7 +6,7 @@
 //  Copyright © 2016 Tyler Ouyang. All rights reserved.
 //
 
-#include "argparser.hpp"
+#include "argparser.h"
 
 /* Parse a single option. */
 error_t parse_opt (int key, char *arg, struct argp_state *state) {

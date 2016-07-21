@@ -4,7 +4,7 @@
  *  Created on: May 19, 2016
  *      Author: tyler
  */
-#include "datareader.hpp"
+#include "datareader.h"
 
 using namespace std;
 
