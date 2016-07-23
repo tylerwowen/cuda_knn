@@ -16,6 +16,9 @@
 #define PCC 3
 #define LLR 4
 
+#define TILE_SIZE 24
+#define TILE_DEPTH 256
+
 /**
  *  {itemId, rating}
  */

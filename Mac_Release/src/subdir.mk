@@ -5,7 +5,8 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CU_SRCS += \
 ../src/cuda_knn.cu \
-../src/thrust_utils.cu 
+../src/thrust_utils.cu \
+../src/utils.cu 
 
 CPP_SRCS += \
 ../src/argparser.cpp \
@@ -17,11 +18,13 @@ OBJS += \
 ./src/cuda_knn.o \
 ./src/datareader.o \
 ./src/main.o \
-./src/thrust_utils.o 
+./src/thrust_utils.o \
+./src/utils.o 
 
 CU_DEPS += \
 ./src/cuda_knn.d \
-./src/thrust_utils.d 
+./src/thrust_utils.d \
+./src/utils.d 
 
 CPP_DEPS += \
 ./src/argparser.d \

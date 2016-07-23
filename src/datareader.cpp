@@ -25,7 +25,7 @@ int readData(string const &filename, H_Users &users) {
       userRatingCount = 0;
     }
 
-    if (userRatingCount >= 192) continue;
+    if (userRatingCount >= TILE_DEPTH) continue;
 
     H_Ratings *ratings = &users[userId-1];
     ratings->emplace_back(itemId, rating);
