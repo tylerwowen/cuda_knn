@@ -13,7 +13,7 @@
 
 #include "common.cuh"
 #include "common.h"
-#include "utils.h"
+#include "utils.cuh"
 #include "thrust_utils.h"
 
 using namespace std;
@@ -118,8 +118,37 @@ void calculateAllDistance(
  * CUDA kernel that computes KNN
  */
 __global__
-void knn() {
+void knn(int userId, int numUsers, int k,
+    short *idxIdMap,
+    Rating *trainRatings, Rating *testRatings,
+    int *trainUser, int *testUser,
+    int *ratingSums, int *ratingCounts) {
 
+  extern __shared__ Rating sharedRatings[];
+  int sumOfRatings = 0;
+  int numOfMatchedNeighbors = 0;
+
+  for (int neighborId = threadIdx.y; neighborId < numUsers; neighborId += blockDim.y) {
+    // load ratings of (TILE_SIZE * 2) users to shared memory
+    int neighborNumRatings = trainUser[neighborId];
+    int nbNumRatings = min(neighborNumRatings, TILE_DEPTH);
+    Rating *neighborStart = sharedRatings + threadIdx.y * TILE_DEPTH;
+    Rating *copyFrom = trainRatings + idxIdMap[neighborId] * TILE_DEPTH;
+    for (int j = threadIdx.x; j < nbNumRatings; j += blockDim.x)
+        neighborStart[j] = copyFrom[j];
+
+    // TODO: incomplete
+    int rate = isItemRated(1, neighborStart, nbNumRatings);
+    if (rate > 0) {
+      // update sum
+      sumOfRatings += rate;
+      numOfMatchedNeighbors++;
+    }
+    if (numOfMatchedNeighbors == k) break;
+    __syncthreads();
+  }
+  atomicAdd(ratingSums + threadIdx.x, sumOfRatings);
+  atomicAdd(ratingCounts + threadIdx.x, numOfMatchedNeighbors);
 }
 
 void moveRatingsToDevice(
@@ -169,7 +198,7 @@ void computeAllDistances(
   Rating *d_allRatings;
   int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
   float *d_distances;
-  short *d_indIdMap;
+  short *d_idxIdMap;
 
   cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
   cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
@@ -190,7 +219,7 @@ void computeAllDistances(
   // allocate memory for distances
   checkCudaErrors(cudaMalloc((void **) &d_distances, sizeof(float) * numTrainUsers * stageHeight * TILE_SIZE));
   // allocate memory for map(neighborIndex->neighborUserId)
-  checkCudaErrors(cudaMalloc((void **) &d_indIdMap, sizeof(unsigned short) * numTrainUsers));
+  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, sizeof(unsigned short) * numTrainUsers));
 
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
   cout << "each kernel has " << stageHeight << " blocks\n";
@@ -210,12 +239,12 @@ void computeAllDistances(
     // KNN
     for (int userNum = 0; userNum < stageHeight * TILE_SIZE; userNum++) {
       // sort
-
-      sortNeighbors(d_distances + userNum * numTrainUsers, numTrainUsers, &d_indIdMap);
+      sortNeighbors(d_distances + userNum * numTrainUsers, numTrainUsers, &d_idxIdMap);
+      // predict
 
     }
   }
-  printptr<<<1,1>>>(d_indIdMap, numTrainUsers);
+  printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);

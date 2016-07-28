@@ -45,7 +45,7 @@ src/%.o: ../src/%.cu
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
 	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -O3 -ccbin /usr/bin/clang++ -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -O3 -ccbin /usr/bin/clang++ -std=c++11 --compile --relocatable-device-code=false -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30  -x cu -o  "$@" "$<"
+	/Developer/NVIDIA/CUDA-7.5/bin/nvcc -O3 -ccbin /usr/bin/clang++ -std=c++11 --compile --relocatable-device-code=true -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30  -x cu -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
