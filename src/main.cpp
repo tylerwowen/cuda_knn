@@ -23,16 +23,18 @@ int main(int argc, char ** argv) {
 
   argp_parse(&argp, argc, argv, 0, 0, &args);
 
-  int trainUserRatingCount;
+  int trainUserRatingCount, testUserRatingCount;
   H_Users h_trainUsers, h_testUsers;
   h_trainUsers.reserve(args.userNum);
   trainUserRatingCount = readData(args.trainFile, h_trainUsers);
+  testUserRatingCount = readData(args.testFile, h_testUsers);
 
-  computeAllDistances(
+  cudaCore(
       trainUserRatingCount,
-      0,
+      testUserRatingCount,
       h_trainUsers,
-      h_testUsers);
+      h_testUsers,
+      args.k);
 
   return 0;
 }

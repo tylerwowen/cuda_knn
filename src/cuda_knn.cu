@@ -59,13 +59,13 @@ float calculateCOSDistance(
 }
 
 /**
- * CUDA kernel that computes distances between every two users in d_users
+ * CUDA kernel that computes distances between every two users in d_trainUsers
  */
 __global__
 void calculateAllDistance(
     int stageStartUser,
     int numUsers,
-    int *d_users,
+    int *d_trainUsers,
     Rating *allRatings,
     float *d_distances) {
 
@@ -76,7 +76,7 @@ void calculateAllDistance(
   // space for TILE_SIZE * 2 users, each one has at most TILE_DEPTH ratings
   __shared__ Rating ratings[TILE_DEPTH * TILE_SIZE * 2];
 
-  int baseNumRatings = d_users[globalUserId];
+  int baseNumRatings = d_trainUsers[globalUserId];
   int numRatings = min(baseNumRatings, TILE_DEPTH);
   Rating *baseStart = ratings + (threadIdx.x + TILE_SIZE) * TILE_DEPTH,
       *baseEnd = baseStart + numRatings;
@@ -90,7 +90,7 @@ void calculateAllDistance(
 
   // TILE_SIZE user per iteration for now
   for (int i = threadIdx.y; i < numUsers; i += TILE_SIZE) {
-    int neighborNumRatings = d_users[i];
+    int neighborNumRatings = d_trainUsers[i];
     int nbNumRatings = min(neighborNumRatings, TILE_DEPTH);
     Rating *neighborStart = ratings + threadIdx.y * TILE_DEPTH,
         *neighborEnd = neighborStart + nbNumRatings;
@@ -118,37 +118,64 @@ void calculateAllDistance(
  * CUDA kernel that computes KNN
  */
 __global__
-void knn(int userId, int numUsers, int k,
+void knn(int numUsers, int k,
     short *idxIdMap,
     Rating *trainRatings, Rating *testRatings,
-    int *trainUser, int *testUser,
+    int *trainUser,
     int *ratingSums, int *ratingCounts) {
 
   extern __shared__ Rating sharedRatings[];
+  // space to store ratings found by each thread
+  short *foundRatings = (short*)&sharedRatings[TILE_DEPTH * blockDim.y];
+  short *finished = (short*)&foundRatings[blockDim.x * blockDim.y];
+
+  int threadId = threadIdx.x * blockDim.y + threadIdx.y;
+  // initialize shared memory
+  foundRatings[threadId] = 0;
+  if (threadIdx.y == 0 ) finished[threadIdx.x] = 0;
+
   int sumOfRatings = 0;
   int numOfMatchedNeighbors = 0;
 
-  for (int neighborId = threadIdx.y; neighborId < numUsers; neighborId += blockDim.y) {
-    // load ratings of (TILE_SIZE * 2) users to shared memory
-    int neighborNumRatings = trainUser[neighborId];
+  int testItemId = testRatings[threadIdx.x].x;
+
+  // TODO: consider stopping at 20*K instead of numUsers
+  for (int neighborIdx = threadIdx.y; neighborIdx < numUsers; neighborIdx += blockDim.y) {
+    if (finished[threadIdx.x]) break;
+
+    // load ratings of blockDim.y users to shared memory
+    int neighborNumRatings = trainUser[idxIdMap[neighborIdx]];
     int nbNumRatings = min(neighborNumRatings, TILE_DEPTH);
+
     Rating *neighborStart = sharedRatings + threadIdx.y * TILE_DEPTH;
-    Rating *copyFrom = trainRatings + idxIdMap[neighborId] * TILE_DEPTH;
+    Rating *copyFrom = trainRatings + idxIdMap[neighborIdx] * TILE_DEPTH;
+
+    // TODO: optimize loading by using row major access
     for (int j = threadIdx.x; j < nbNumRatings; j += blockDim.x)
         neighborStart[j] = copyFrom[j];
 
-    // TODO: incomplete
-    int rate = isItemRated(1, neighborStart, nbNumRatings);
-    if (rate > 0) {
-      // update sum
-      sumOfRatings += rate;
-      numOfMatchedNeighbors++;
+    foundRatings[threadId] = findItemRating(testItemId, neighborStart, nbNumRatings);
+    // thread 0 of each movie collects information
+    if (threadIdx.y == 0) {
+      for (int i = 0; i < blockDim.y; i++) {
+        if (numOfMatchedNeighbors == k) {
+          finished[threadIdx.x] = 1;
+          break;
+        }
+        int rate = foundRatings[threadIdx.x * blockDim.y + i];
+        if ( rate > 0) {
+          sumOfRatings+= rate;
+          numOfMatchedNeighbors++;
+        }
+      }
     }
-    if (numOfMatchedNeighbors == k) break;
     __syncthreads();
   }
-  atomicAdd(ratingSums + threadIdx.x, sumOfRatings);
-  atomicAdd(ratingCounts + threadIdx.x, numOfMatchedNeighbors);
+  if (threadIdx.y == 0) {
+    ratingSums[threadIdx.x] = sumOfRatings;
+    ratingCounts[threadIdx.x] = numOfMatchedNeighbors;
+//    printf("prediction for item %d is %d\n", testItemId, sumOfRatings);
+  }
 }
 
 void moveRatingsToDevice(
@@ -157,18 +184,18 @@ void moveRatingsToDevice(
     Rating **d_ratings) {
 
   // make numTrainUsers a multiple of TILE_SIZE
-  int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
-  int numRatings = numTrainUsers * TILE_DEPTH;
-  int *h_users = new int[numTrainUsers];
+  int numUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
+  int numRatings = numUsers * TILE_DEPTH;
+  int *h_users = new int[numUsers];
 
-  for (int i = 0; i < numTrainUsers; i++)
+  for (int i = 0; i < numUsers; i++)
     h_users[i] = 0;
 
   Rating *h_ratings = new Rating[sizeof(Rating) * numRatings];
   checkCudaErrors(cudaMalloc((void **) d_ratings, sizeof(Rating) * numRatings));
   cout << "total size of ratings in bytes: " << sizeof(Rating) * numRatings << endl;
 
-  for (int i = 0; i < numTrainUsers; i++) {
+  for (int i = 0; i < numUsers; i++) {
     int numRatings = h_trainUsers[i].size();
 
     // copy vector to intermediate host array
@@ -181,29 +208,75 @@ void moveRatingsToDevice(
   }
   // move data from host to device
   checkCudaErrors(cudaMemcpy(*d_ratings, h_ratings, sizeof(Rating) * numRatings, cudaMemcpyHostToDevice));
-  checkCudaErrors(cudaMalloc((void **) d_users, sizeof(int) * numTrainUsers));
-  checkCudaErrors(cudaMemcpy(*d_users, h_users, sizeof(int) * numTrainUsers, cudaMemcpyHostToDevice));
+  checkCudaErrors(cudaMalloc((void **) d_users, sizeof(int) * numUsers));
+  checkCudaErrors(cudaMemcpy(*d_users, h_users, sizeof(int) * numUsers, cudaMemcpyHostToDevice));
 
   delete[] h_ratings;
   delete[] h_users;
 }
 
-void computeAllDistances(
+void initUsers(User *users, int num) {
+  for (int i = 0; i < num; i++)
+    users[i] = {NULL, 0};
+}
+
+void moveTestRatingsToDevice(
+    H_Users h_testUsers,
+    User *h_users,
+    Rating **d_ratings,
+    int testUserRatingCount) {
+
+  int numTestUsers = h_testUsers.size();
+  initUsers(h_users, numTestUsers);
+
+  Rating *h_ratings = new Rating[sizeof(Rating) * testUserRatingCount];
+  checkCudaErrors(cudaMalloc((void ** )d_ratings, sizeof(Rating) * testUserRatingCount));
+  cout << "total size of ratings in bytes: " << sizeof(Rating) * testUserRatingCount << endl;
+
+  int ratingsSoFar = 0;
+  for (int i = 0; i < numTestUsers; i++) {
+    int numRatings = h_testUsers[i].size();
+    if (numRatings < 1) continue;
+
+    // copy vector to intermediate host array
+    for (int j = 0; j < numRatings; j++) {
+      h_ratings[ratingsSoFar + j].x = h_testUsers[i][j].first;
+      h_ratings[ratingsSoFar + j].y = h_testUsers[i][j].second * 2;
+    }
+    // save index
+    h_users[i].ratings = *d_ratings + ratingsSoFar;
+    h_users[i].numRatings = numRatings;
+
+    ratingsSoFar += numRatings;
+  }
+  // move data from host to device
+  checkCudaErrors(cudaMemcpy(*d_ratings, h_ratings, sizeof(Rating) * testUserRatingCount, cudaMemcpyHostToDevice));
+
+  delete[] h_ratings;
+}
+
+
+void cudaCore(
     int trainUserRatingCount,
     int testUserRatingCount,
     H_Users h_trainUsers,
-    H_Users h_testUsers) {
+    H_Users h_testUsers,
+    int k) {
 
-  int *d_users;
-  Rating *d_allRatings;
+  int *d_trainUsers, *d_ratingSums, *d_ratingCounts;
+  User *h_testUsersIdx = new User[h_testUsers.size()];
+  Rating *d_trainRatings, *d_testRatings;
   int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
   float *d_distances;
   short *d_idxIdMap;
 
   cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
   cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
+  cout << "testUserRatingCount: " << testUserRatingCount << endl;
+  cout << "number of test users: " << h_testUsers.size() << endl;
 
-  moveRatingsToDevice(h_trainUsers, &d_users, &d_allRatings);
+  moveRatingsToDevice(h_trainUsers, &d_trainUsers, &d_trainRatings);
+  moveTestRatingsToDevice(h_testUsers, h_testUsersIdx, &d_testRatings, testUserRatingCount);
   cout << "data moved to device\n";
 
   // get global memory
@@ -218,8 +291,9 @@ void computeAllDistances(
 
   // allocate memory for distances
   checkCudaErrors(cudaMalloc((void **) &d_distances, sizeof(float) * numTrainUsers * stageHeight * TILE_SIZE));
-  // allocate memory for map(neighborIndex->neighborUserId)
-  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, sizeof(unsigned short) * numTrainUsers));
+
+  checkCudaErrors(cudaMalloc((void **) &d_ratingSums, sizeof(int) * 32));
+  checkCudaErrors(cudaMalloc((void **) &d_ratingCounts, sizeof(int) * 32));
 
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
   cout << "each kernel has " << stageHeight << " blocks\n";
@@ -234,14 +308,28 @@ void computeAllDistances(
   for (int stageStartUser = 0; stageStartUser < numTrainUsers; stageStartUser += stageHeight * TILE_SIZE) {
     int effectiveStageHeight = min(stageHeight, (numTrainUsers - stageStartUser) / TILE_SIZE);
     calculateAllDistance<<<effectiveStageHeight, threadsPerBlock>>>
-    (stageStartUser, numTrainUsers, d_users, d_allRatings, d_distances);
+    (stageStartUser, numTrainUsers, d_trainUsers, d_trainRatings, d_distances);
 
     // KNN
-    for (int userNum = 0; userNum < stageHeight * TILE_SIZE; userNum++) {
-      // sort
-      sortNeighbors(d_distances + userNum * numTrainUsers, numTrainUsers, &d_idxIdMap);
-      // predict
+    for (int testUserIdOffset = 0; testUserIdOffset < stageHeight * TILE_SIZE; testUserIdOffset++) {
+      int numTestItems = h_testUsersIdx[stageStartUser + testUserIdOffset].numRatings;
+      if (numTestItems < 1) continue;
 
+      // sort
+      sortNeighbors(d_distances + testUserIdOffset * numTrainUsers, numTrainUsers, &d_idxIdMap);
+      // predict
+      if (numTestItems > 32) {
+//        cout << "more than 32 test items\n";
+        continue;
+      }
+      dim3 threadsPerBlock(numTestItems, 32);
+      knn<<<1, threadsPerBlock, 32*TILE_DEPTH*sizeof(Rating) + (numTestItems*33)*sizeof(short)>>>
+          (numTrainUsers, k,
+          d_idxIdMap,
+          d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings,
+          d_trainUsers,
+          d_ratingSums, d_ratingCounts);
+      cudaDeviceSynchronize();
     }
   }
   printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
@@ -251,11 +339,16 @@ void computeAllDistances(
   cudaEventElapsedTime(&milliseconds, start, stop);
   cout << "kernel ended, took " << milliseconds << "ms\n";
 
+  cudaDeviceSynchronize();
   /* Free memory */
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-  checkCudaErrors(cudaFree(d_allRatings));
-  checkCudaErrors(cudaFree(d_users));
+  checkCudaErrors(cudaFree(d_trainRatings));
+  checkCudaErrors(cudaFree(d_testRatings));
+  checkCudaErrors(cudaFree(d_trainUsers));
+  checkCudaErrors(cudaFree(d_distances));
+  checkCudaErrors(cudaFree(d_ratingSums));
+  checkCudaErrors(cudaFree(d_ratingCounts));
   cudaDeviceReset();
+  delete[] h_testUsersIdx;
 }
-

@@ -23,12 +23,14 @@ __global__ void printptr(short *ptr, int numNeighbors) {
  * @return  -1 if not found, otherwise returns the corresponding rating
  *
  */
-__device__ int isItemRated(int itemId, Rating *ratings, int numRatings) {
+__device__ int findItemRating(int itemId, Rating *ratings, int numRatings) {
+  if (numRatings < 1) return -1;
   int left = 0, right = numRatings - 1;
-
+//  printf("itemid:%d, ratings[0].x:%d, ratings[0].y:%d, numratings:%d\n",itemId, ratings[0].x,
+//      ratings[0].y, numRatings);
   while(left < right){
     int midInd = (left + right) / 2;
-    unsigned midItemId = (ratings + midInd)->x;
+    unsigned midItemId = ratings[midInd].x;
     if (midItemId > itemId) {
       right = midInd - 1;
     }
@@ -36,11 +38,12 @@ __device__ int isItemRated(int itemId, Rating *ratings, int numRatings) {
       left = midInd + 1;
     }
     else {
-      return 1;
+      return ratings[midInd].y;
     }
   }
   // The last left==right matched
-  if (itemId == (ratings + right)->x) return 1;
-  return 0;
+  if (itemId == ratings[right].x) return ratings[right].y;
+  return -1;
 }
+
 

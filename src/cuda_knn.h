@@ -10,11 +10,12 @@
 
 #include "common.h"
 
-void computeAllDistances(
+void cudaCore(
     int trainUserRatingCount,
     int testUserRatingCount,
     H_Users h_trainUsers,
-    H_Users h_testUsers);
+    H_Users h_testUsers,
+    int k);
 
 
 #endif /* CUDA_KNN_H_ */

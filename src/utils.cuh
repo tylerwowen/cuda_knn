@@ -11,6 +11,6 @@
 #include "common.cuh"
 
 __global__ void printptr(short *ptr, int numNeighbors);
-__device__ int isItemRated(int itemId, Rating *ratings, int numRatings);
+__device__ int findItemRating(int itemId, Rating *ratings, int numRatings);
 
 #endif /* UTILS_CUH_ */
