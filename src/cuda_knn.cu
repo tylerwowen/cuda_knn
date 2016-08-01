@@ -174,7 +174,7 @@ void knn(int numUsers, int k,
   if (threadIdx.y == 0) {
     ratingSums[threadIdx.x] = sumOfRatings;
     ratingCounts[threadIdx.x] = numOfMatchedNeighbors;
-//    printf("prediction for item %d is %d\n", testItemId, sumOfRatings);
+//    printf("prediction for item %d is %f\n", testItemId, (float)sumOfRatings/numOfMatchedNeighbors/2);
   }
 }
 
@@ -264,11 +264,15 @@ void cudaCore(
     int k) {
 
   int *d_trainUsers, *d_ratingSums, *d_ratingCounts;
+  int h_ratingCounts[32], h_ratingSums[32];
   User *h_testUsersIdx = new User[h_testUsers.size()];
   Rating *d_trainRatings, *d_testRatings;
   int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
   float *d_distances;
   short *d_idxIdMap;
+
+  int predictedCount = 0;
+  float errorSum = 0, errorSumSq = 0;
 
   cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
   cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
@@ -329,7 +333,23 @@ void cudaCore(
           d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings,
           d_trainUsers,
           d_ratingSums, d_ratingCounts);
+
       cudaDeviceSynchronize();
+
+      checkCudaErrors(cudaMemcpy(h_ratingSums, d_ratingSums, sizeof(int) * 32, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(h_ratingCounts, d_ratingCounts, sizeof(int) * 32, cudaMemcpyDeviceToHost));
+
+      cudaDeviceSynchronize();
+      for (int i = 0; i < numTestItems; i++) {
+        short actual = h_testUsers[stageStartUser + testUserIdOffset][i].second;
+        if (h_ratingCounts[i] == 0) continue;
+        float prediction = h_ratingSums[i] / (float)h_ratingCounts[i] / 2;
+        cout << "user: " << stageStartUser + testUserIdOffset << " item: " << h_testUsers[stageStartUser + testUserIdOffset][i].first
+            << " actual = " << actual << " predicted = "<< prediction << " based on " << h_ratingCounts[i] << " ratings\n";
+        errorSum += fabs(actual - prediction);
+        errorSumSq += pow(actual - prediction, 2);
+        predictedCount++;
+      }
     }
   }
   printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
@@ -338,6 +358,12 @@ void cudaCore(
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&milliseconds, start, stop);
   cout << "kernel ended, took " << milliseconds << "ms\n";
+
+  double mae = errorSum / predictedCount,
+    rmse = sqrt(errorSumSq / predictedCount);
+  cout << "MAE = " << mae << endl;
+  cout << "RMSE = " << rmse << endl;
+  cout << "Predicted count  = " << predictedCount << endl;
 
   cudaDeviceSynchronize();
   /* Free memory */

@@ -24,7 +24,6 @@ __global__ void printptr(short *ptr, int numNeighbors) {
  *
  */
 __device__ int findItemRating(int itemId, Rating *ratings, int numRatings) {
-  if (numRatings < 1) return -1;
   int left = 0, right = numRatings - 1;
 //  printf("itemid:%d, ratings[0].x:%d, ratings[0].y:%d, numratings:%d\n",itemId, ratings[0].x,
 //      ratings[0].y, numRatings);
@@ -42,7 +41,7 @@ __device__ int findItemRating(int itemId, Rating *ratings, int numRatings) {
     }
   }
   // The last left==right matched
-  if (itemId == ratings[right].x) return ratings[right].y;
+  if (right >= 0 && itemId == ratings[right].x) return ratings[right].y;
   return -1;
 }
 
