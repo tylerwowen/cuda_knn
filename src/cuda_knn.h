@@ -17,5 +17,4 @@ void cudaCore(
     H_Users h_testUsers,
     int k);
 
-
 #endif /* CUDA_KNN_H_ */

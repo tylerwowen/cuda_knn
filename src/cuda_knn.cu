@@ -120,7 +120,7 @@ void calculateAllDistance(
 __global__
 void knn(int numUsers, int k,
     short *idxIdMap,
-    Rating *trainRatings, Rating *testRatings,
+    Rating *trainRatings, Rating *testRatings, int testRatingOffset,
     int *trainUser,
     int *ratingSums, int *ratingCounts) {
 
@@ -137,15 +137,13 @@ void knn(int numUsers, int k,
   int sumOfRatings = 0;
   int numOfMatchedNeighbors = 0;
 
-  int testItemId = testRatings[threadIdx.x].x;
+  int testItemId = testRatings[testRatingOffset + threadIdx.x].x;
 
   // TODO: consider stopping at 20*K instead of numUsers
   for (int neighborIdx = threadIdx.y; neighborIdx < numUsers; neighborIdx += blockDim.y) {
-    if (finished[threadIdx.x]) break;
-
     // load ratings of blockDim.y users to shared memory
-    int neighborNumRatings = trainUser[idxIdMap[neighborIdx]];
-    int nbNumRatings = min(neighborNumRatings, TILE_DEPTH);
+    int nbNumRatings = trainUser[idxIdMap[neighborIdx]];
+    nbNumRatings = min(nbNumRatings, TILE_DEPTH);
 
     Rating *neighborStart = sharedRatings + threadIdx.y * TILE_DEPTH;
     Rating *copyFrom = trainRatings + idxIdMap[neighborIdx] * TILE_DEPTH;
@@ -153,24 +151,30 @@ void knn(int numUsers, int k,
     // TODO: optimize loading by using row major access
     for (int j = threadIdx.x; j < nbNumRatings; j += blockDim.x)
         neighborStart[j] = copyFrom[j];
+    __syncthreads();
 
-    foundRatings[threadId] = findItemRating(testItemId, neighborStart, nbNumRatings);
-    // thread 0 of each movie collects information
-    if (threadIdx.y == 0) {
-      for (int i = 0; i < blockDim.y; i++) {
-        if (numOfMatchedNeighbors == k) {
-          finished[threadIdx.x] = 1;
-          break;
-        }
-        int rate = foundRatings[threadIdx.x * blockDim.y + i];
-        if ( rate > 0) {
-          sumOfRatings+= rate;
-          numOfMatchedNeighbors++;
+    if (!finished[threadIdx.x]) {
+      foundRatings[threadId] = findItemRating(testItemId, neighborStart, nbNumRatings);
+      __syncthreads();
+
+      // thread 0 of each movie collects information
+      if (threadIdx.y == 0) {
+        for (int i = 0; i < blockDim.y; i++) {
+          if (numOfMatchedNeighbors == k) {
+            finished[threadIdx.x] = 1;
+            break;
+          }
+          int rate = foundRatings[threadId + i];
+          if ( rate > 0) {
+            sumOfRatings+= rate;
+            numOfMatchedNeighbors++;
+          }
         }
       }
     }
     __syncthreads();
   }
+  __syncthreads();
   if (threadIdx.y == 0) {
     ratingSums[threadIdx.x] = sumOfRatings;
     ratingCounts[threadIdx.x] = numOfMatchedNeighbors;
@@ -321,35 +325,40 @@ void cudaCore(
 
       // sort
       sortNeighbors(d_distances + testUserIdOffset * numTrainUsers, numTrainUsers, &d_idxIdMap);
+
       // predict
-      if (numTestItems > 32) {
-//        cout << "more than 32 test items\n";
-        continue;
+      int numBlocks = (numTestItems + 31) / 32;
+      int remaining = numTestItems;
+      for (int block = 0; block < numBlocks; block++) {
+        int itemInBlock = min(remaining, 32);
+        remaining -= 32;
+        dim3 threadsPerBlock(itemInBlock, 32);
+        knn<<<1, threadsPerBlock, 32*TILE_DEPTH*sizeof(Rating) + (threadsPerBlock.x*33)*sizeof(short)>>>
+                 (numTrainUsers, k,
+                 d_idxIdMap,
+                 d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings, block * threadsPerBlock.x,
+                 d_trainUsers,
+                 d_ratingSums, d_ratingCounts);
+//        cudaDeviceSynchronize();
+
+        checkCudaErrors(cudaMemcpy(h_ratingSums, d_ratingSums, sizeof(int) * 32, cudaMemcpyDeviceToHost));
+        checkCudaErrors(cudaMemcpy(h_ratingCounts, d_ratingCounts, sizeof(int) * 32, cudaMemcpyDeviceToHost));
+//        cudaDeviceSynchronize();
+
+        for (int i = 0; i < threadsPerBlock.x; i++) {
+          short actual = h_testUsers[stageStartUser + testUserIdOffset][i].second;
+          if (h_ratingCounts[i] == 0) continue;
+          float prediction = h_ratingSums[i] / (float)h_ratingCounts[i] / 2;
+//          cout << "user: " << stageStartUser + testUserIdOffset + 1 << " item: " << h_testUsers[stageStartUser + testUserIdOffset][i].first
+//             << " actual = " << actual << " predicted = "<< prediction << " based on " << h_ratingCounts[i] << " ratings\n";
+          errorSum += fabs(actual - prediction);
+          errorSumSq += pow(actual - prediction, 2);
+          predictedCount++;
+        }
       }
-      dim3 threadsPerBlock(numTestItems, 32);
-      knn<<<1, threadsPerBlock, 32*TILE_DEPTH*sizeof(Rating) + (numTestItems*33)*sizeof(short)>>>
-          (numTrainUsers, k,
-          d_idxIdMap,
-          d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings,
-          d_trainUsers,
-          d_ratingSums, d_ratingCounts);
-
-      cudaDeviceSynchronize();
-
-      checkCudaErrors(cudaMemcpy(h_ratingSums, d_ratingSums, sizeof(int) * 32, cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(h_ratingCounts, d_ratingCounts, sizeof(int) * 32, cudaMemcpyDeviceToHost));
-
-      cudaDeviceSynchronize();
-      for (int i = 0; i < numTestItems; i++) {
-        short actual = h_testUsers[stageStartUser + testUserIdOffset][i].second;
-        if (h_ratingCounts[i] == 0) continue;
-        float prediction = h_ratingSums[i] / (float)h_ratingCounts[i] / 2;
-        cout << "user: " << stageStartUser + testUserIdOffset << " item: " << h_testUsers[stageStartUser + testUserIdOffset][i].first
-            << " actual = " << actual << " predicted = "<< prediction << " based on " << h_ratingCounts[i] << " ratings\n";
-        errorSum += fabs(actual - prediction);
-        errorSumSq += pow(actual - prediction, 2);
-        predictedCount++;
-      }
+      freeRawPointer(d_idxIdMap);
+//      checkCudaErrors(cudaFree(d_idxIdMap));
+//      cudaDeviceSynchronize();
     }
   }
   printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);

@@ -13,6 +13,8 @@
 #include <thrust/gather.h>
 #include <thrust/iterator/counting_iterator.h>
 
+static thrust::device_vector<short> *vector;
+
 /**
  * Sort neighbors by distance
  */
@@ -27,5 +29,12 @@ void sortNeighbors(float *d_distances, int numNeighbors, short **d_indIdMap) {
 
   // first sort the keys and indices by the keys
   thrust::sort_by_key(keys, keys + numNeighbors, ids.begin(), thrust::greater<float>());
+  vector = &ids;
   *d_indIdMap = thrust::raw_pointer_cast(&ids[0]);
+}
+
+void freeRawPointer(short *ptr) {
+  vector->clear();
+//  thrust::device_vector<short>().swap(*vector);
+//  checkCudaErrors(cudaFree(dev_ptr));
 }

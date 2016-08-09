@@ -10,6 +10,6 @@
 
 
 void sortNeighbors(float *d_distances, int numNeighbors, short **d_indIdMap);
-
+void freeRawPointer(short *ptr);
 
 #endif /* THRUST_UTILS_H_ */
