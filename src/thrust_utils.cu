@@ -18,7 +18,7 @@ static thrust::device_vector<short> *vector;
 /**
  * Sort neighbors by distance
  */
-void sortNeighbors(float *d_distances, int numNeighbors, short **d_indIdMap) {
+void sortNeighbors(float *d_distances, int numNeighbors, short *d_indIdMap) {
 
   thrust::device_ptr<float> keys(d_distances);
 
@@ -29,8 +29,7 @@ void sortNeighbors(float *d_distances, int numNeighbors, short **d_indIdMap) {
 
   // first sort the keys and indices by the keys
   thrust::sort_by_key(keys, keys + numNeighbors, ids.begin(), thrust::greater<float>());
-  vector = &ids;
-  *d_indIdMap = thrust::raw_pointer_cast(&ids[0]);
+  thrust::copy(ids.begin(), ids.end(), thrust::device_pointer_cast(d_indIdMap));
 }
 
 void freeRawPointer(short *ptr) {
