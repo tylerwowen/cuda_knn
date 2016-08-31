@@ -274,7 +274,7 @@ void cudaCore(
   short *d_idxIdMap;
 
   int predictedCount = 0;
-  float errorSum = 0, errorSumSq = 0;
+  double errorSum = 0, errorSumSq = 0;
 
   cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
   cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
@@ -345,7 +345,7 @@ void cudaCore(
         checkCudaErrors(cudaMemcpy(h_ratingCounts, d_ratingCounts, sizeof(int) * 32, cudaMemcpyDeviceToHost));
 
         for (int i = 0; i < itemsInBlock; i++) {
-          short actual = h_testUsers[stageStartUser + testUserIdOffset][i+block * 32].second;
+          float actual = h_testUsers[stageStartUser + testUserIdOffset][i + block * 32].second;
           if (h_ratingCounts[i] == 0) continue;
           float prediction = h_ratingSums[i] / (float)h_ratingCounts[i] / 2;
 //          cout << "user: " << stageStartUser + testUserIdOffset + 1
@@ -360,6 +360,12 @@ void cudaCore(
         }
       }
     }
+    cout << "error sum so far: " << errorSum << ", error sum squared so far" << errorSumSq << endl;
+    double mae = errorSum / predictedCount,
+        rmse = sqrt(errorSumSq / predictedCount);
+    cout << "MAE = " << mae << endl;
+    cout << "RMSE = " << rmse << endl;
+    cout << "Predicted count so far = " << predictedCount << endl;
   }
 //  printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
 
@@ -372,7 +378,7 @@ void cudaCore(
     rmse = sqrt(errorSumSq / predictedCount);
   cout << "MAE = " << mae << endl;
   cout << "RMSE = " << rmse << endl;
-  cout << "Predicted count  = " << predictedCount << endl;
+  cout << "Predicted count = " << predictedCount << endl;
 
   cudaDeviceSynchronize();
   /* Free memory */
