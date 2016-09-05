@@ -360,7 +360,7 @@ void cudaCore(
         }
       }
     }
-    cout << "error sum so far: " << errorSum << ", error sum squared so far" << errorSumSq << endl;
+    cout << "\nerror sum so far: " << errorSum << ", error sum squared so far " << errorSumSq << endl;
     double mae = errorSum / predictedCount,
         rmse = sqrt(errorSumSq / predictedCount);
     cout << "MAE = " << mae << endl;
