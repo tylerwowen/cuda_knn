@@ -58,7 +58,7 @@ all: cuda_knn
 cuda_knn: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: NVCC Linker'
-	/opt/apps/cuda/7.5/bin/nvcc --cudart static --relocatable-device-code=true -gencode arch=compute_35,code=compute_35 -gencode arch=compute_35,code=sm_35 -link -o  "cuda_knn" $(OBJS) $(USER_OBJS) $(LIBS)
+	$TACC_CUDA_DIR/bin/nvcc --cudart static --relocatable-device-code=true -gencode arch=compute_35,code=compute_35 -gencode arch=compute_35,code=sm_35 -link -o  "cuda_knn" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

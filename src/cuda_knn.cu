@@ -286,22 +286,22 @@ void cudaCore(
   cout << "data moved to device\n";
 
   // get global memory
-  struct cudaDeviceProp prop;
-  checkCudaErrors(cudaGetDeviceProperties(&prop, 0));
-  cout << "device has " << prop.totalGlobalMem << " global memory\n";
+  size_t freeMemSize, totalMemSize;
+  checkCudaErrors(cudaMemGetInfo(&freeMemSize, &totalMemSize));
+  cout << "device has " << freeMemSize << " free global memory\n";
+
+  checkCudaErrors(cudaMalloc((void **) &d_ratingSums, 32 * sizeof(int)));
+  checkCudaErrors(cudaMalloc((void **) &d_ratingCounts, 32 * sizeof(int)));
+  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, numTrainUsers * sizeof(short)));
 
   // calculate how many distances GPU can store, e.g. size of stage
   size_t ratingsSize = numTrainUsers * TILE_DEPTH * sizeof(Rating);
-  size_t freeMemSize = prop.totalGlobalMem - ratingsSize * 2;
+  freeMemSize -= ratingsSize * 2;
   cout << "train rating size " << ratingsSize <<  "\nfreeMemSize is " << freeMemSize << endl;
   int stageHeight = min(freeMemSize / ( numTrainUsers * sizeof(float)) / TILE_SIZE, (long) numTrainUsers / TILE_SIZE);
 
   // allocate memory for distances
   checkCudaErrors(cudaMalloc((void **) &d_distances, sizeof(float) * numTrainUsers * stageHeight * TILE_SIZE));
-
-  checkCudaErrors(cudaMalloc((void **) &d_ratingSums, 32 * sizeof(int)));
-  checkCudaErrors(cudaMalloc((void **) &d_ratingCounts, 32 * sizeof(int)));
-  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, numTrainUsers * sizeof(short)));
   cudaDeviceSynchronize();
 
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);

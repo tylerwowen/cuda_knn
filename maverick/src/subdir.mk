@@ -36,16 +36,16 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/intel/15/composer_xe_2015.3.187/bin/intel64/icc -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/intel/15/composer_xe_2015.3.187/bin/intel64/icc -std=c++11 --compile  -x c++ -o  "$@" "$<"
+	$TACC_CUDA_DIR/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.7.1/bin/g++ -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	$TACC_CUDA_DIR/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.7.1/bin/g++ -std=c++11 --compile  -x c++ -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.cu
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/intel/15/composer_xe_2015.3.187/bin/intel64/icc -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/intel/15/composer_xe_2015.3.187/bin/intel64/icc -std=c++11 --compile --relocatable-device-code=true -gencode arch=compute_35,code=compute_35 -gencode arch=compute_35,code=sm_35  -x cu -o  "$@" "$<"
+	$TACC_CUDA_DIR/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.7.1/bin/g++ -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	$TACC_CUDA_DIR/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.7.1/bin/g++ -std=c++11 --compile --relocatable-device-code=true -gencode arch=compute_35,code=compute_35 -gencode arch=compute_35,code=sm_35  -x cu -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
