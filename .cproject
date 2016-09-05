@@ -334,7 +334,7 @@
 								<option id="nvcc.compiler.cpp11option.52813665" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1931079701" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.1127708167" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
-								<option id="nvcc.compiler.option.gprof.259467667" superClass="nvcc.compiler.option.gprof" value="false" valueType="boolean"/>
+								<option id="nvcc.compiler.option.gprof.259467667" name="Generate gprof information (-pg)" superClass="nvcc.compiler.option.gprof" value="false" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.1027678926" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1211567777" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1943849872" superClass="nvcc.compiler.input.c"/>
@@ -364,7 +364,7 @@
 								<option id="nvcc.compiler.cpp11option.724065398" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.306725798" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.1915698101" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
-								<option id="nvcc.compiler.option.gprof.1978595639" superClass="nvcc.compiler.option.gprof" value="false" valueType="boolean"/>
+								<option id="nvcc.compiler.option.gprof.1978595639" name="Generate gprof information (-pg)" superClass="nvcc.compiler.option.gprof" value="false" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.1957259385" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.2053072751" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1920073179" superClass="nvcc.compiler.input.c"/>
