@@ -19,6 +19,9 @@
 #define TILE_SIZE 24
 #define TILE_DEPTH 256
 
+#define CONC_ITEMS_NUM 32
+#define NUM_NEIGHBORS 32
+
 /**
  *  {itemId, rating}
  */
