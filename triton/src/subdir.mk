@@ -36,16 +36,16 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.9.3/bin/g++ -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.9.3/bin/g++ -std=c++11 --compile  -x c++ -o  "$@" "$<"
+	/opt/cuda/7.5.18/bin/nvcc -O3 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	/opt/cuda/7.5.18/bin/nvcc -O3 -std=c++11 --compile  -x c++ -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.cu
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.9.3/bin/g++ -std=c++11 -gencode arch=compute_35,code=sm_35  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
-	/opt/apps/cuda/7.5/bin/nvcc -O3 -ccbin /opt/apps/gcc/4.9.3/bin/g++ -std=c++11 --compile --relocatable-device-code=true -gencode arch=compute_35,code=compute_35 -gencode arch=compute_35,code=sm_35  -x cu -o  "$@" "$<"
+	/opt/cuda/7.5.18/bin/nvcc -O3 -std=c++11 -gencode arch=compute_30,code=sm_30  -odir "src" -M -o "$(@:%.o=%.d)" "$<"
+	/opt/cuda/7.5.18/bin/nvcc -O3 -std=c++11 --compile --relocatable-device-code=true -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30  -x cu -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

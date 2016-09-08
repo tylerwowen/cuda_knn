@@ -103,4 +103,4 @@ nsightbuilddata
 *.d
 
 # executable 
-*_*/cuda_knn
+*/cuda_knn
