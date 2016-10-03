@@ -69,9 +69,9 @@ void calculateAllDistance(
     Rating *allRatings,
     float *d_distances) {
 
-  int globalUserId = stageStartUser + blockIdx.x * blockDim.x + threadIdx.x;
+  int globalUserId = stageStartUser + blockIdx.x * TILE_SIZE + threadIdx.x;
   // user id relative in stage
-  int localUserId = blockIdx.x * blockDim.x + threadIdx.x;
+  int localUserId = blockIdx.x * TILE_SIZE + threadIdx.x;
   // TODO: experimental, need optimization
   // space for TILE_SIZE * 2 users, each one has at most TILE_DEPTH ratings
   __shared__ Rating ratings[TILE_DEPTH * TILE_SIZE * 2];
@@ -87,7 +87,7 @@ void calculateAllDistance(
     baseStart[i] = copyFrom[i];
   __syncthreads();
 
-  // TILE_SIZE user per iteration for now
+  // TILE_SIZE users per iteration for now
   for (int i = threadIdx.y; i < numUsers; i += TILE_SIZE) {
     int nbNumRatings = d_trainUsers[i];
     Rating *neighborStart = ratings + threadIdx.y * TILE_DEPTH,
@@ -114,72 +114,6 @@ void calculateAllDistance(
 
 /**
  * CUDA kernel that computes KNN
- */
-__global__
-void knn(int numUsers, int k,
-    short *idxIdMap,
-    Rating *trainRatings, Rating *testRatings,
-    int *trainUser,
-    int *ratingSums, int *ratingCounts) {
-
-  extern __shared__ Rating sharedRatings[];
-  // space to store ratings found by each thread
-  short *foundRatings = (short*) &sharedRatings[TILE_DEPTH * NUM_NEIGHBORS];
-  short *finished = (short*) &foundRatings[blockDim.x * NUM_NEIGHBORS];
-
-  int threadId = threadIdx.x * NUM_NEIGHBORS + threadIdx.y;
-  // initialize shared memory
-  foundRatings[threadId] = 0;
-  if (threadIdx.y == 0 ) finished[threadIdx.x] = 0;
-
-  int sumOfRatings = 0;
-  int numOfMatchedNeighbors = 0;
-
-  int testItemId = testRatings[threadIdx.x].x;
-
-  // TODO: consider stopping at 20*K instead of numUsers
-  for (int neighborIdx = threadIdx.y; neighborIdx < numUsers; neighborIdx += NUM_NEIGHBORS) {
-    // load ratings of NUM_NEIGHBORS users to shared memory
-    int nbNumRatings = trainUser[idxIdMap[neighborIdx]];
-
-    Rating *neighborStart = sharedRatings + threadIdx.y * TILE_DEPTH;
-    Rating *copyFrom = trainRatings + idxIdMap[neighborIdx] * TILE_DEPTH;
-
-    // TODO: optimize loading by using row major access
-    for (int j = threadIdx.x; j < nbNumRatings; j += blockDim.x)
-      neighborStart[j] = copyFrom[j];
-    __syncthreads();
-
-    if (!finished[threadIdx.x]) {
-      foundRatings[threadId] = findItemRating(testItemId, neighborStart, nbNumRatings);
-      __syncthreads();
-
-      // thread 0 of each movie collects information
-      if (threadIdx.y == 0) {
-        int count = min(numUsers - neighborIdx, NUM_NEIGHBORS);
-        for (int i = 0; i < count; i++) {
-          if (numOfMatchedNeighbors == k) {
-            finished[threadIdx.x] = 1;
-            break;
-          }
-          int rate = foundRatings[threadId + i];
-          if (rate > 0) {
-            sumOfRatings += rate;
-            numOfMatchedNeighbors++;
-          }
-        }
-      }
-    }
-  }
-  if (threadIdx.y == 0) {
-    ratingSums[threadIdx.x] = sumOfRatings;
-    ratingCounts[threadIdx.x] = numOfMatchedNeighbors;
-//    printf("prediction for item %d is %f\n", testItemId, (float)sumOfRatings/numOfMatchedNeighbors/2);
-  }
-}
-
-/**
- * CUDA kernel that computes KNN optimized for users with items < 8
  */
 __global__
 void knn_8(int numUsers, int k,
@@ -364,17 +298,26 @@ void cudaCore(
   cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " kernels will be launched\n";
 
   cudaEvent_t start, stop;
-  float milliseconds = 0;
+  float milliseconds = 0, distanceCalTime = 0, knnCalTime = 0;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  cudaEventRecord(start);
   for (int stageStartUser = 0; stageStartUser < numTrainUsers; stageStartUser += stageHeight * TILE_SIZE) {
+    cudaEventRecord(start);
+    cudaEventSynchronize(start);
+
     int effectiveStageHeight = min(stageHeight, (numTrainUsers - stageStartUser) / TILE_SIZE);
     calculateAllDistance<<<effectiveStageHeight, threadsPerBlock>>>
     (stageStartUser, numTrainUsers, d_trainUsers, d_trainRatings, d_distances);
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    distanceCalTime += milliseconds;
+
     // KNN
+    cudaEventRecord(start);
+    cudaEventSynchronize(start);
     for (int testUserIdOffset = 0; testUserIdOffset < effectiveStageHeight * TILE_SIZE; testUserIdOffset++) {
       int numTestItems = h_testUsersIdx[stageStartUser + testUserIdOffset].numRatings;
       if (numTestItems < 1) continue;
@@ -390,22 +333,12 @@ void cudaCore(
         remaining -= CONC_ITEMS_NUM;
         dim3 threadsPerBlock(itemsInBlock, NUM_NEIGHBORS);
 
-        if (itemsInBlock < 33) {
-          knn_8<<<1, threadsPerBlock, (itemsInBlock*(NUM_NEIGHBORS+1))*sizeof(short)>>>
-          (numTrainUsers, k,
-              d_idxIdMap,
-              d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings + block * CONC_ITEMS_NUM,
-              d_trainUsers,
-              d_ratingSums, d_ratingCounts);
-        }
-        else {
-          knn<<<1, threadsPerBlock, NUM_NEIGHBORS*TILE_DEPTH*sizeof(Rating) + (itemsInBlock*(NUM_NEIGHBORS+1))*sizeof(short)>>>
-          (numTrainUsers, k,
-              d_idxIdMap,
-              d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings + block * CONC_ITEMS_NUM,
-              d_trainUsers,
-              d_ratingSums, d_ratingCounts);
-        }
+        knn_8<<<1, threadsPerBlock, (itemsInBlock*(NUM_NEIGHBORS+1))*sizeof(short)>>>
+        (numTrainUsers, k,
+            d_idxIdMap,
+            d_trainRatings, h_testUsersIdx[stageStartUser + testUserIdOffset].ratings + block * CONC_ITEMS_NUM,
+            d_trainUsers,
+            d_ratingSums, d_ratingCounts);
 
         checkCudaErrors(cudaMemcpy(h_ratingSums, d_ratingSums, sizeof(int) * itemsInBlock, cudaMemcpyDeviceToHost));
         checkCudaErrors(cudaMemcpy(h_ratingCounts, d_ratingCounts, sizeof(int) * itemsInBlock, cudaMemcpyDeviceToHost));
@@ -435,13 +368,16 @@ void cudaCore(
     cout << "MAE = " << mae << endl;
     cout << "RMSE = " << rmse << endl;
     cout << "Predicted count so far = " << predictedCount << endl;
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    knnCalTime += milliseconds;
   }
 //  printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
 
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&milliseconds, start, stop);
-  cout << "kernel ended, took " << milliseconds << "ms\n";
+  cout << "\ndistance calculation took " << distanceCalTime << "ms\n";
+  cout << "knn took " << knnCalTime << "ms\n";
 
   double mae = errorSum / predictedCount,
     rmse = sqrt(errorSumSq / predictedCount);
