@@ -1,0 +1,15 @@
+trainUserRatingCount: 6221888
+number of users: 71567; effective user: 71544
+testUserRatingCount: 1959136
+number of test users: 71567
+size of train ratings in bytes: 73261056
+data moved to device
+device has 4294770688 global memory
+train rating size 73261056
+freeMemSize is 4148248576
+each kernel has 603 blocks
+5 kernels will be launched
+kernel ended, took 4.90311e+06ms
+MAE = 0.802879
+RMSE = 1.0281
+Predicted count  = 1956703

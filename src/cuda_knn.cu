@@ -318,7 +318,8 @@ void cudaCore(
     // KNN
     cudaEventRecord(start);
     cudaEventSynchronize(start);
-    for (int testUserIdOffset = 0; testUserIdOffset < effectiveStageHeight * TILE_SIZE; testUserIdOffset++) {
+    int maxTestUserIdOffset = min(effectiveStageHeight * TILE_SIZE, (int)h_testUsers.size() - stageStartUser);
+    for (int testUserIdOffset = 0; testUserIdOffset < maxTestUserIdOffset; testUserIdOffset++) {
       int numTestItems = h_testUsersIdx[stageStartUser + testUserIdOffset].numRatings;
       if (numTestItems < 1) continue;
 

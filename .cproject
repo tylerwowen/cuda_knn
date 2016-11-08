@@ -95,32 +95,30 @@
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="rm -rf" description="" id="com.nvidia.cuda.ide.seven_five.configuration.release.365333592" name="Mac_Release" parent="com.nvidia.cuda.ide.seven_five.configuration.release">
 					<folderInfo id="com.nvidia.cuda.ide.seven_five.configuration.release.365333592." name="/" resourcePath="">
-						<toolChain id="com.nvidia.cuda.ide.toolchain.seven_five.exe.release.23031633" name="CUDA Toolkit 7.5" superClass="com.nvidia.cuda.ide.toolchain.seven_five.exe.release">
-							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.1601943412" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
-							<builder buildPath="${workspace_loc:/cuda_knn}/Release" id="com.nvidia.cuda.ide.builder.1426704818" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="CUDA Toolkit 8.0 Builder" superClass="com.nvidia.cuda.ide.builder"/>
-							<tool id="nvcc.compiler.base.2090426763" name="NVCC Compiler" superClass="nvcc.compiler.base">
-								<option id="nvcc.compiler.deviceDebug.468366136" name="Generate device debug information (-G)" superClass="nvcc.compiler.deviceDebug"/>
-								<option id="nvcc.compiler.option.level.384127793" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level"/>
-								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.1744071298" name="Optimization Level" superClass="nvcc.compiler.optimization.level" valueType="enumerated"/>
-								<option id="nvcc.compiler.pic.2129858539" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="nvcc.compiler.cpp11option.102237737" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
-								<option id="com.nvidia.cuda.ide.build.option1.43071809" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/usr/bin/clang++" valueType="string"/>
-								<inputType id="nvcc.compiler.input.cu.1933687498" superClass="nvcc.compiler.input.cu"/>
-								<inputType id="nvcc.compiler.input.cpp.1540587734" superClass="nvcc.compiler.input.cpp"/>
-								<inputType id="nvcc.compiler.input.c.366433968" superClass="nvcc.compiler.input.c"/>
+						<toolChain id="com.nvidia.cuda.ide.toolchain.eight_zero.372062386" name="CUDA Toolkit 8.0" superClass="com.nvidia.cuda.ide.toolchain.eight_zero">
+							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.358747089" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
+							<builder buildPath="${workspace_loc:/cuda_knn}/Mac_Release" id="com.nvidia.cuda.ide.builder.1146317161" name="CUDA Toolkit 8.0 Builder.Mac_Release" superClass="com.nvidia.cuda.ide.builder"/>
+							<tool id="nvcc.compiler.base.400558754" name="NVCC Compiler" superClass="nvcc.compiler.base">
+								<option id="nvcc.compiler.deviceDebug.1829894581" superClass="nvcc.compiler.deviceDebug"/>
+								<option id="nvcc.compiler.option.level.1395921809" superClass="nvcc.compiler.option.level"/>
+								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.74813327" superClass="nvcc.compiler.optimization.level" valueType="enumerated"/>
+								<option id="nvcc.compiler.pic.2056058017" superClass="nvcc.compiler.pic"/>
+								<inputType id="nvcc.compiler.input.cu.1546922234" superClass="nvcc.compiler.input.cu"/>
+								<inputType id="nvcc.compiler.input.cpp.1472131340" superClass="nvcc.compiler.input.cpp"/>
+								<inputType id="nvcc.compiler.input.c.1067232148" superClass="nvcc.compiler.input.c"/>
 							</tool>
-							<tool id="nvcc.linker.base.550907546" name="NVCC Linker" superClass="nvcc.linker.base">
-								<option id="nvcc.linker.option.libs.666711132" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
+							<tool id="nvcc.linker.base.1740188350" name="NVCC Linker" superClass="nvcc.linker.base">
+								<option id="nvcc.linker.option.libs.616208174" superClass="nvcc.linker.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="argp"/>
 								</option>
-								<inputType id="nvcc.linker.input.1833334235" superClass="nvcc.linker.input">
+								<inputType id="nvcc.linker.input.335372866" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
 								</inputType>
 							</tool>
-							<tool id="nvcc.archiver.base.1197999848" name="NVCC Archiver" superClass="nvcc.archiver.base"/>
-							<tool id="com.nvidia.host.assembler.581389370" name="Host Assembler" superClass="com.nvidia.host.assembler">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1520284819" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							<tool id="nvcc.archiver.base.595357987" name="NVCC Archiver" superClass="nvcc.archiver.base"/>
+							<tool id="com.nvidia.host.assembler.1476126264" name="Host Assembler" superClass="com.nvidia.host.assembler">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.546832218" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
@@ -419,7 +417,7 @@
 								<option id="com.nvidia.cuda.ide.build.option1.2049142158" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.1819255031" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1871625606" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
-								<option id="nvcc.compiler.option.lineinfo.1260120101" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="true" valueType="boolean"/>
+								<option id="nvcc.compiler.option.lineinfo.1260120101" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.1683900149" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1123253378" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.78477035" superClass="nvcc.compiler.input.c"/>
@@ -448,7 +446,7 @@
 								<option id="com.nvidia.cuda.ide.build.option1.2053541330" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.692588110" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.239586811" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
-								<option id="nvcc.compiler.option.lineinfo.827092158" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="true" valueType="boolean"/>
+								<option id="nvcc.compiler.option.lineinfo.827092158" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
 								<inputType id="nvcc.compiler.input.cu.862529951" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.589345455" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1311539873" superClass="nvcc.compiler.input.c"/>
