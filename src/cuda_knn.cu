@@ -18,6 +18,47 @@
 
 using namespace std;
 
+#define FREEMEM_SCALER 100;
+
+__device__
+float calculateLiraDistance(
+    Rating *r1Start,
+    Rating *r1End,
+    Rating *r2Start,
+    Rating *r2End) {
+
+  int maxRating = 5;
+  // TODO: change 10 to MACRO
+  int deltaCounter[5] = {0};
+
+  while (r1Start < r1End && r2Start < r2End) {
+    if (r1Start->x < r2Start->x) {
+      r1Start++;
+    }
+    else if (r1Start->x == r2Start->x) {
+      deltaCounter[abs(r1Start->y - r2Start->y)]++;
+      r1Start++;
+      r2Start++;
+    }
+    else {
+      r2Start++;
+    }
+  }
+  float accumulator = 1;
+  accumulator *= pow(0.5, deltaCounter[0]) / pow(1.0 / (float)maxRating, deltaCounter[0]);
+
+  for (int i = 1; i < maxRating - 1; i++) {
+    float pA = pow(2, -i - 1),
+        pRand = 2 * (maxRating - i) / (float)(maxRating * maxRating);
+    accumulator *= pow(pA, deltaCounter[i]) / pow(pRand, deltaCounter[i]);
+  }
+
+  float pRand = 2 / (float)(maxRating * maxRating);
+  accumulator *= pow(pow(2, -maxRating + 1), deltaCounter[maxRating-1]) / pow(pRand, deltaCounter[maxRating-1]);
+
+  return log10(accumulator);
+}
+
 __device__
 float calculateCOSDistance(
     Rating *r1Start,
@@ -101,7 +142,7 @@ void calculateAllDistance(
     __syncthreads();
 
     d_distances[localUserId * numUsers + i]
-                = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
+                = calculateLiraDistance(baseStart, baseEnd, neighborStart, neighborEnd);
 
 //    if (globalUserId == 0) {
 //      printf("%d, %.10lf\n", i+1,
@@ -286,6 +327,7 @@ void cudaCore(
   // calculate how many distances GPU can store, e.g. size of stage
   size_t ratingsSize = numTrainUsers * TILE_DEPTH * sizeof(Rating);
   freeMemSize -= ratingsSize * 10;
+  freeMemSize = freeMemSize - ratingsSize * FREEMEM_SCALER;
   cout << "train rating size " << ratingsSize << "\nfreeMemSize is " << freeMemSize << endl;
   int stageHeight = min(freeMemSize / (numTrainUsers * sizeof(float)) / TILE_SIZE, (long) numTrainUsers / TILE_SIZE);
 
@@ -318,8 +360,7 @@ void cudaCore(
     // KNN
     cudaEventRecord(start);
     cudaEventSynchronize(start);
-    int maxTestUserIdOffset = min(effectiveStageHeight * TILE_SIZE, (int)h_testUsers.size() - stageStartUser);
-    for (int testUserIdOffset = 0; testUserIdOffset < maxTestUserIdOffset; testUserIdOffset++) {
+    for (int testUserIdOffset = 0; testUserIdOffset < effectiveStageHeight * TILE_SIZE; testUserIdOffset++) {
       int numTestItems = h_testUsersIdx[stageStartUser + testUserIdOffset].numRatings;
       if (numTestItems < 1) continue;
 
