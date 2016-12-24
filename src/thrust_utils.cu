@@ -18,14 +18,14 @@ static thrust::device_vector<short> *vector;
 /**
  * Sort neighbors by distance
  */
-void sortNeighbors(float *d_distances, int numNeighbors, short *d_indIdMap) {
+void sortNeighbors(float *d_distances, int numNeighbors, int *d_indIdMap) {
 
   thrust::device_ptr<float> keys(d_distances);
-  thrust::device_ptr<short> d_indIdMap_wrapped(d_indIdMap);
+  thrust::device_ptr<int> d_indIdMap_wrapped(d_indIdMap);
 
   // initialize indices vector to [0,1,2,..]
-  thrust::counting_iterator<short> iter(0);
-  thrust::device_vector<short> ids(numNeighbors);
+  thrust::counting_iterator<int> iter(0);
+  thrust::device_vector<int> ids(numNeighbors);
   thrust::copy(iter, iter + ids.size(), ids.begin());
 
   // first sort the keys and indices by the keys

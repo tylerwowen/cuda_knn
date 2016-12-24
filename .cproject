@@ -97,18 +97,18 @@
 					<folderInfo id="com.nvidia.cuda.ide.seven_five.configuration.release.365333592." name="/" resourcePath="">
 						<toolChain id="com.nvidia.cuda.ide.toolchain.eight_zero.372062386" name="CUDA Toolkit 8.0" superClass="com.nvidia.cuda.ide.toolchain.eight_zero">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.358747089" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
-							<builder buildPath="${workspace_loc:/cuda_knn}/Mac_Release" id="com.nvidia.cuda.ide.builder.1146317161" name="CUDA Toolkit 8.0 Builder.Mac_Release" superClass="com.nvidia.cuda.ide.builder"/>
+							<builder buildPath="${workspace_loc:/cuda_knn}/Mac_Release" id="com.nvidia.cuda.ide.builder.1146317161" keepEnvironmentInBuildfile="false" name="CUDA Toolkit 8.0 Builder" superClass="com.nvidia.cuda.ide.builder"/>
 							<tool id="nvcc.compiler.base.400558754" name="NVCC Compiler" superClass="nvcc.compiler.base">
-								<option id="nvcc.compiler.deviceDebug.1829894581" superClass="nvcc.compiler.deviceDebug"/>
-								<option id="nvcc.compiler.option.level.1395921809" superClass="nvcc.compiler.option.level"/>
-								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.74813327" superClass="nvcc.compiler.optimization.level" valueType="enumerated"/>
-								<option id="nvcc.compiler.pic.2056058017" superClass="nvcc.compiler.pic"/>
+								<option id="nvcc.compiler.deviceDebug.1829894581" name="Generate device debug information (-G)" superClass="nvcc.compiler.deviceDebug"/>
+								<option id="nvcc.compiler.option.level.1395921809" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level"/>
+								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.74813327" name="Optimization Level" superClass="nvcc.compiler.optimization.level" valueType="enumerated"/>
+								<option id="nvcc.compiler.pic.2056058017" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
 								<inputType id="nvcc.compiler.input.cu.1546922234" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1472131340" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1067232148" superClass="nvcc.compiler.input.c"/>
 							</tool>
 							<tool id="nvcc.linker.base.1740188350" name="NVCC Linker" superClass="nvcc.linker.base">
-								<option id="nvcc.linker.option.libs.616208174" superClass="nvcc.linker.option.libs" valueType="libs">
+								<option id="nvcc.linker.option.libs.616208174" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="argp"/>
 								</option>
 								<inputType id="nvcc.linker.input.335372866" superClass="nvcc.linker.input">
@@ -162,7 +162,7 @@
 								<option id="nvcc.compiler.option.level.1368720571" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="true" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.577234813" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.808076574" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.1765925893" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/usr/bin/clang++-3.6" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.1765925893" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.2026675285" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.816553453" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<inputType id="nvcc.compiler.input.cu.462979542" superClass="nvcc.compiler.input.cu"/>
@@ -190,7 +190,7 @@
 								<option id="nvcc.compiler.option.level.2118695660" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="true" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1991114751" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1735272953" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.1181533876" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/usr/bin/clang++-3.6" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.1181533876" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.505047292" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1010852760" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<inputType id="nvcc.compiler.input.cu.26609914" superClass="nvcc.compiler.input.cu"/>
@@ -328,7 +328,7 @@
 								<option id="nvcc.compiler.option.level.1107510584" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="false" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1122586934" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.804724534" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.397133027" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/apps/gcc/4.7.1/bin/g++" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.397133027" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/apps/gcc/4.9.3/bin/g++" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.52813665" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1931079701" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.1127708167" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
@@ -339,6 +339,7 @@
 							</tool>
 							<tool id="nvcc.linker.base.381493210" name="NVCC Linker" superClass="nvcc.linker.base">
 								<option id="nvcc.linker.option.libs.463941057" name="Libraries (-l)" superClass="nvcc.linker.option.libs"/>
+								<option id="com.nvidia.cuda.ide.build.linker.ccbin.998587073" superClass="com.nvidia.cuda.ide.build.linker.ccbin" value="/opt/apps/gcc/4.9.3/bin/g++" valueType="string"/>
 								<inputType id="nvcc.linker.input.1020171882" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -358,7 +359,7 @@
 								<option id="nvcc.compiler.option.level.454604834" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="false" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1404612866" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1077354835" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.383300107" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/apps/gcc/4.7.1/bin/g++" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.383300107" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/apps/gcc/4.9.3/bin/g++" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.724065398" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.306725798" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.1915698101" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
@@ -367,7 +368,9 @@
 								<inputType id="nvcc.compiler.input.cpp.2053072751" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1920073179" superClass="nvcc.compiler.input.c"/>
 							</tool>
-							<tool id="nvcc.linker.base.177341802" name="NVCC Linker" superClass="nvcc.linker.base"/>
+							<tool id="nvcc.linker.base.177341802" name="NVCC Linker" superClass="nvcc.linker.base">
+								<option id="com.nvidia.cuda.ide.build.linker.ccbin.1761196330" superClass="com.nvidia.cuda.ide.build.linker.ccbin" value="/opt/apps/gcc/4.9.3/bin/g++" valueType="string"/>
+							</tool>
 							<tool id="nvcc.archiver.base.1159768654" name="NVCC Archiver" superClass="nvcc.archiver.base"/>
 							<tool id="com.nvidia.host.assembler.918106173" name="Host Assembler" superClass="com.nvidia.host.assembler">
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1504215324" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
@@ -414,7 +417,7 @@
 								<option id="nvcc.compiler.option.level.488877249" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="false" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.827718900" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1209665250" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.2049142158" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.2049142158" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/gnu/gcc/bin/g++" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.1819255031" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1871625606" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.1260120101" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
@@ -424,6 +427,7 @@
 							</tool>
 							<tool id="nvcc.linker.base.231270324" name="NVCC Linker" superClass="nvcc.linker.base">
 								<option id="nvcc.linker.option.libs.1912914344" name="Libraries (-l)" superClass="nvcc.linker.option.libs"/>
+								<option id="com.nvidia.cuda.ide.build.linker.ccbin.1668186339" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.linker.ccbin" value="" valueType="string"/>
 								<inputType id="nvcc.linker.input.2072464563" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -443,7 +447,7 @@
 								<option id="nvcc.compiler.option.level.1893005318" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="false" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1827278701" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.703271187" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="com.nvidia.cuda.ide.build.option1.2053541330" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="" valueType="string"/>
+								<option id="com.nvidia.cuda.ide.build.option1.2053541330" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.option1" value="/opt/gnu/gcc/bin/g++" valueType="string"/>
 								<option id="nvcc.compiler.cpp11option.692588110" name="Enable C++11 support (-std=c++11)" superClass="nvcc.compiler.cpp11option" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.239586811" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions"/>
 								<option id="nvcc.compiler.option.lineinfo.827092158" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
@@ -451,7 +455,9 @@
 								<inputType id="nvcc.compiler.input.cpp.589345455" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1311539873" superClass="nvcc.compiler.input.c"/>
 							</tool>
-							<tool id="nvcc.linker.base.1176053405" name="NVCC Linker" superClass="nvcc.linker.base"/>
+							<tool id="nvcc.linker.base.1176053405" name="NVCC Linker" superClass="nvcc.linker.base">
+								<option id="com.nvidia.cuda.ide.build.linker.ccbin.522950614" name="Compiler Path (-ccbin)" superClass="com.nvidia.cuda.ide.build.linker.ccbin" value="" valueType="string"/>
+							</tool>
 							<tool id="nvcc.archiver.base.1513161679" name="NVCC Archiver" superClass="nvcc.archiver.base"/>
 							<tool id="com.nvidia.host.assembler.1884919237" name="Host Assembler" superClass="com.nvidia.host.assembler">
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.29591595" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>

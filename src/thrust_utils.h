@@ -9,7 +9,7 @@
 #define THRUST_UTILS_H_
 
 
-void sortNeighbors(float *d_distances, int numNeighbors, short *d_indIdMap);
+void sortNeighbors(float *d_distances, int numNeighbors, int *d_indIdMap);
 void freeRawPointer(short *ptr);
 
 #endif /* THRUST_UTILS_H_ */

@@ -18,7 +18,7 @@
 
 using namespace std;
 
-#define FREEMEM_SCALER 100;
+#define FREEMEM_SCALER 50;
 
 __device__
 float calculateLiraDistance(
@@ -142,7 +142,7 @@ void calculateAllDistance(
     __syncthreads();
 
     d_distances[localUserId * numUsers + i]
-                = calculateLiraDistance(baseStart, baseEnd, neighborStart, neighborEnd);
+                = calculateCOSDistance(baseStart, baseEnd, neighborStart, neighborEnd);
 
 //    if (globalUserId == 0) {
 //      printf("%d, %.10lf\n", i+1,
@@ -158,7 +158,7 @@ void calculateAllDistance(
  */
 __global__
 void knn_8(int numUsers, int k,
-    short *idxIdMap,
+    int *idxIdMap,
     Rating *trainRatings, Rating *testRatings,
     int *trainUser,
     int *ratingSums, int *ratingCounts) {
@@ -301,7 +301,7 @@ void cudaCore(
   int numTrainUsers = h_trainUsers.size() / TILE_SIZE * TILE_SIZE;
   User *h_testUsersIdx = new User[numTrainUsers];
   float *d_distances;
-  short *d_idxIdMap;
+  int *d_idxIdMap;
 
   int predictedCount = 0;
   double errorSum = 0, errorSumSq = 0;
@@ -322,12 +322,11 @@ void cudaCore(
 
   checkCudaErrors(cudaMalloc((void **) &d_ratingSums, CONC_ITEMS_NUM * sizeof(int)));
   checkCudaErrors(cudaMalloc((void **) &d_ratingCounts, CONC_ITEMS_NUM * sizeof(int)));
-  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, numTrainUsers * sizeof(short)));
+  checkCudaErrors(cudaMalloc((void **) &d_idxIdMap, numTrainUsers * sizeof(int)));
 
   // calculate how many distances GPU can store, e.g. size of stage
   size_t ratingsSize = numTrainUsers * TILE_DEPTH * sizeof(Rating);
-  freeMemSize -= ratingsSize * 10;
-  freeMemSize = freeMemSize - ratingsSize * FREEMEM_SCALER;
+  freeMemSize -= ratingsSize * FREEMEM_SCALER;
   cout << "train rating size " << ratingsSize << "\nfreeMemSize is " << freeMemSize << endl;
   int stageHeight = min(freeMemSize / (numTrainUsers * sizeof(float)) / TILE_SIZE, (long) numTrainUsers / TILE_SIZE);
 
@@ -336,8 +335,8 @@ void cudaCore(
   cudaDeviceSynchronize();
 
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
-  cout << "each kernel has " << stageHeight << " blocks\n";
-  cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " kernels will be launched\n";
+  cout << "each stage has " << stageHeight << " blocks\n";
+  cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " stages will be launched\n";
 
   cudaEvent_t start, stop;
   float milliseconds = 0, distanceCalTime = 0, knnCalTime = 0;
