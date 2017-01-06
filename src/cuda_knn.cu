@@ -226,7 +226,7 @@ void moveRatingsToDevice(
 
   Rating *h_ratings = new Rating[sizeof(Rating) * totalNumRatings];
   checkCudaErrors(cudaMalloc((void **) d_ratings, sizeof(Rating) * totalNumRatings));
-  cout << "size of train ratings in bytes: " << sizeof(Rating) * totalNumRatings << endl;
+//  cout << "size of train ratings in bytes: " << sizeof(Rating) * totalNumRatings << endl;
 
   for (int i = 0; i < numUsers; i++) {
     int numRatings = min((int)h_trainUsers[i].size(), TILE_DEPTH);
@@ -303,22 +303,22 @@ void cudaCore(
   float *d_distances;
   int *d_idxIdMap;
 
-  int predictedCount = 0;
+  int predictedCount = 0, validTestSize = 0;
   double errorSum = 0, errorSumSq = 0;
 
-  cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
-  cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
-  cout << "testUserRatingCount: " << testUserRatingCount << endl;
-  cout << "number of test users: " << h_testUsers.size() << endl;
+//  cout << "trainUserRatingCount: " << trainUserRatingCount << endl;
+//  cout << "number of users: " << h_trainUsers.size() << "; effective user: " << numTrainUsers << endl;
+//  cout << "testUserRatingCount: " << testUserRatingCount << endl;
+//  cout << "number of test users: " << h_testUsers.size() << endl;
 
   moveRatingsToDevice(h_trainUsers, &d_trainUsers, &d_trainRatings);
   moveTestRatingsToDevice(h_testUsers, h_testUsersIdx, &d_testRatings, numTrainUsers, testUserRatingCount);
-  cout << "data moved to device\n";
+//  cout << "data moved to device\n";
 
   // get free memory
   size_t freeMemSize, totalMemSize;
   checkCudaErrors(cudaMemGetInfo(&freeMemSize, &totalMemSize));
-  cout << "device has " << freeMemSize << " free global memory\n";
+//  cout << "device has " << freeMemSize << " free global memory\n";
 
   checkCudaErrors(cudaMalloc((void **) &d_ratingSums, CONC_ITEMS_NUM * sizeof(int)));
   checkCudaErrors(cudaMalloc((void **) &d_ratingCounts, CONC_ITEMS_NUM * sizeof(int)));
@@ -327,7 +327,7 @@ void cudaCore(
   // calculate how many distances GPU can store, e.g. size of stage
   size_t ratingsSize = numTrainUsers * TILE_DEPTH * sizeof(Rating);
   freeMemSize -= ratingsSize * FREEMEM_SCALER;
-  cout << "train rating size " << ratingsSize << "\nfreeMemSize is " << freeMemSize << endl;
+//  cout << "train rating size " << ratingsSize << "\nfreeMemSize is " << freeMemSize << endl;
   int stageHeight = min(freeMemSize / (numTrainUsers * sizeof(float)) / TILE_SIZE, (long) numTrainUsers / TILE_SIZE);
 
   // allocate memory for distances
@@ -335,8 +335,8 @@ void cudaCore(
   cudaDeviceSynchronize();
 
   dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
-  cout << "each stage has " << stageHeight << " blocks\n";
-  cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " stages will be launched\n";
+//  cout << "each stage has " << stageHeight << " blocks\n";
+//  cout << (numTrainUsers + stageHeight * TILE_SIZE - 1) / (stageHeight * TILE_SIZE) << " stages will be launched\n";
 
   cudaEvent_t start, stop;
   float milliseconds = 0, distanceCalTime = 0, knnCalTime = 0;
@@ -362,6 +362,7 @@ void cudaCore(
     for (int testUserIdOffset = 0; testUserIdOffset < effectiveStageHeight * TILE_SIZE; testUserIdOffset++) {
       int numTestItems = h_testUsersIdx[stageStartUser + testUserIdOffset].numRatings;
       if (numTestItems < 1) continue;
+      validTestSize += numTestItems;
 
       // sort
       sortNeighbors(d_distances + testUserIdOffset * numTrainUsers, numTrainUsers, d_idxIdMap);
@@ -403,12 +404,12 @@ void cudaCore(
         }
       }
     }
-    cout << "\nerror sum so far: " << errorSum << ", error sum squared so far " << errorSumSq << endl;
-    double mae = errorSum / predictedCount,
-        rmse = sqrt(errorSumSq / predictedCount);
-    cout << "MAE = " << mae << endl;
-    cout << "RMSE = " << rmse << endl;
-    cout << "Predicted count so far = " << predictedCount << endl;
+//    cout << "\nerror sum so far: " << errorSum << ", error sum squared so far " << errorSumSq << endl;
+//    double mae = errorSum / predictedCount,
+//        rmse = sqrt(errorSumSq / predictedCount);
+//    cout << "MAE = " << mae << endl;
+//    cout << "RMSE = " << rmse << endl;
+//    cout << "Predicted count so far = " << predictedCount << endl;
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -417,14 +418,17 @@ void cudaCore(
   }
 //  printptr<<<1,1>>>(d_idxIdMap, numTrainUsers);
 
-  cout << "\ndistance calculation took " << distanceCalTime << "ms\n";
-  cout << "knn took " << knnCalTime << "ms\n";
+//  cout << "\ndistance calculation took " << distanceCalTime << "ms\n";
+//  cout << "knn took " << knnCalTime << "ms\n";
+
+  cout << distanceCalTime << " " << knnCalTime << " ";
 
   double mae = errorSum / predictedCount,
     rmse = sqrt(errorSumSq / predictedCount);
-  cout << "MAE = " << mae << endl;
-  cout << "RMSE = " << rmse << endl;
-  cout << "Predicted count = " << predictedCount << endl;
+//  cout << "MAE = " << mae << endl;
+//  cout << "RMSE = " << rmse << endl;
+//  cout << "Predicted count = " << predictedCount << endl;
+  cout << mae << " " << rmse << " " << (double)predictedCount / (double)validTestSize << endl;
 
   cudaDeviceSynchronize();
   /* Free memory */
